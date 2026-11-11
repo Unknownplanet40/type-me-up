@@ -44,6 +44,7 @@ public interface ITypeForgeStateService
     void RecordSession(SessionResult result);
     string BuildAdaptivePracticeText(SessionResult? sourceResult = null);
     string BuildWeakKeyDrillText(SessionResult? sourceResult = null);
+    void QueueNextDrill(SessionResult? sourceResult = null);
     (int Stars, bool Passed) EvaluateCourseOutcome(SessionResult result);
 }
 
@@ -262,7 +263,119 @@ public sealed class TypeForgeStateService : ITypeForgeStateService
 
     public string BuildWeakKeyDrillText(SessionResult? sourceResult = null)
     {
-        return BuildAdaptivePracticeText(sourceResult);
+        IReadOnlyDictionary<char, KeyMetric> metrics = sourceResult is { KeyBreakdown.Count: > 0 }
+            ? sourceResult.KeyBreakdown
+            : AggregateKeyMetrics;
+
+        List<char> weakChars = metrics.Values
+            .Where(m => !char.IsWhiteSpace(m.Character) && (m.IncorrectKeystrokes > 0 || m.AverageLatencyMs >= 420.0))
+            .OrderByDescending(m => m.ErrorRatePercentage)
+            .ThenByDescending(m => m.AverageLatencyMs)
+            .Take(4)
+            .Select(m => m.Character)
+            .ToList();
+
+        if (weakChars.Count == 0)
+        {
+            return BuildAdaptivePracticeText(sourceResult);
+        }
+
+        HashSet<char> allowedLetters = _adaptiveStates
+            .Where(s => s.IsUnlocked)
+            .Select(s => char.ToUpperInvariant(s.Character))
+            .ToHashSet();
+
+        foreach (char weak in weakChars.Where(char.IsLetter))
+        {
+            allowedLetters.Add(char.ToUpperInvariant(weak));
+        }
+
+        List<char> nonLetters = weakChars.Where(c => !char.IsLetter(c)).ToList();
+        if (nonLetters.Count > 0)
+        {
+            List<string> chunks = new(14);
+            List<string> baseWords = _dictionaryWords.Where(w => w.Length is >= 3 and <= 6).Take(40).ToList();
+            for (int i = 0; i < 12; i++)
+            {
+                char target = nonLetters[i % nonLetters.Count];
+                if (char.IsDigit(target))
+                {
+                    char alt = nonLetters[(i + 1) % nonLetters.Count];
+                    chunks.Add($"{target}{target}{alt}{target}");
+                }
+                else
+                {
+                    string word = baseWords.Count > 0 ? baseWords[(i * 7) % baseWords.Count] : "code";
+                    chunks.Add($"{word}{target}");
+                }
+            }
+
+            return string.Join(' ', chunks);
+        }
+
+        return AdaptiveEngine.GeneratePracticeText(
+            allowedLetters,
+            metrics,
+            Settings.AdaptiveWordMode,
+            _dictionaryWords,
+            wordCount: 16);
+    }
+
+    public void QueueNextDrill(SessionResult? sourceResult = null)
+    {
+        if (PendingSessionType == SessionType.CourseLesson
+            && !string.IsNullOrWhiteSpace(PendingLessonId)
+            && _exerciseLookup.TryGetValue(PendingLessonId, out CourseExercise? currentExercise))
+        {
+            CourseTrack? track = _courseCatalog.GetTrack(currentExercise.TrackId);
+            if (track is not null)
+            {
+                List<CourseExercise> ordered = track.Units
+                    .OrderBy(u => u.UnitNumber)
+                    .SelectMany(u => u.Exercises.OrderBy(e => e.OrderIndex))
+                    .ToList();
+
+                int currentIndex = ordered.FindIndex(e => string.Equals(e.ExerciseId, currentExercise.ExerciseId, StringComparison.OrdinalIgnoreCase));
+                for (int i = currentIndex + 1; i >= 1 && i < ordered.Count; i++)
+                {
+                    CourseExercise next = ordered[i];
+                    if (!next.IsUnlocked)
+                    {
+                        break;
+                    }
+
+                    if (next.Kind == CourseStepKind.Tip)
+                    {
+                        MarkCourseTipCompleted(next.ExerciseId);
+                        continue;
+                    }
+
+                    string prompt = GetEffectiveExercisePrompt(next);
+                    QueuePracticeSession(
+                        $"{track.Title} · {next.Title}",
+                        prompt,
+                        SessionType.CourseLesson,
+                        next.ExerciseId);
+                    return;
+                }
+            }
+        }
+
+        if (PendingSessionType == SessionType.TimedTest && _timedPassages.Count > 0)
+        {
+            int currentIdx = _timedPassages.ToList().FindIndex(p => PendingPromptTitle.Contains(p.Title, StringComparison.OrdinalIgnoreCase));
+            TimedPassage nextPassage = _timedPassages[(currentIdx + 1) % _timedPassages.Count];
+            TimeSpan limit = PendingTimedLimit ?? TimeSpan.FromMinutes(1);
+            QueuePracticeSession(
+                $"Timed Test ({(int)limit.TotalMinutes}m) · {nextPassage.Title}",
+                nextPassage.Text,
+                SessionType.TimedTest,
+                timedLimit: limit);
+            return;
+        }
+
+        string drillText = BuildAdaptivePracticeText(sourceResult);
+        QueuePracticeSession("Adaptive Practice · Keybr Focus", drillText, SessionType.AdaptivePractice);
     }
 
     private async Task InitializeAsync()

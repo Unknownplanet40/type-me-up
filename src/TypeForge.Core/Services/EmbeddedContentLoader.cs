@@ -23,13 +23,6 @@ public static class EmbeddedContentLoader
     private const string PassagesResourceName = "TypeForge.Core.Resources.timed_passages.json";
     private const string DictionaryResourceName = "TypeForge.Core.Resources.english_words.json";
 
-    private static readonly JsonSerializerOptions SerializerOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true
-    };
-
     private static readonly string[] FallbackDictionaryWords =
     [
         "a", "as", "ask", "all", "dad", "sad", "lad", "fall", "hall", "flask",
@@ -59,7 +52,7 @@ public static class EmbeddedContentLoader
         CurriculumDocument? doc;
         try
         {
-            doc = JsonSerializer.Deserialize<CurriculumDocument>(json, SerializerOptions);
+            doc = JsonSerializer.Deserialize(json, EmbeddedContentJsonContext.Default.CurriculumDocument);
         }
         catch (JsonException ex)
         {
@@ -198,7 +191,7 @@ public static class EmbeddedContentLoader
         PassagesDocument? doc;
         try
         {
-            doc = JsonSerializer.Deserialize<PassagesDocument>(json, SerializerOptions);
+            doc = JsonSerializer.Deserialize(json, EmbeddedContentJsonContext.Default.PassagesDocument);
         }
         catch (JsonException ex)
         {
@@ -272,7 +265,7 @@ public static class EmbeddedContentLoader
         CoursesDocument? doc;
         try
         {
-            doc = JsonSerializer.Deserialize<CoursesDocument>(json, SerializerOptions);
+            doc = JsonSerializer.Deserialize(json, EmbeddedContentJsonContext.Default.CoursesDocument);
         }
         catch (JsonException ex)
         {
@@ -375,7 +368,7 @@ public static class EmbeddedContentLoader
 
         try
         {
-            WordsDocument? doc = JsonSerializer.Deserialize<WordsDocument>(json, SerializerOptions);
+            WordsDocument? doc = JsonSerializer.Deserialize(json, EmbeddedContentJsonContext.Default.WordsDocument);
             if (doc?.Words is null || doc.Words.Count == 0)
             {
                 return FallbackDictionaryWords;
@@ -429,13 +422,13 @@ public static class EmbeddedContentLoader
             ])
     ];
 
-    private sealed class CurriculumDocument
+    internal sealed class CurriculumDocument
     {
         [JsonPropertyName("levels")]
         public List<LevelDto>? Levels { get; set; }
     }
 
-    private sealed class LevelDto
+    internal sealed class LevelDto
     {
         [JsonPropertyName("levelId")]
         public int LevelId { get; set; }
@@ -453,7 +446,7 @@ public static class EmbeddedContentLoader
         public List<LessonDto>? Lessons { get; set; }
     }
 
-    private sealed class LessonDto
+    internal sealed class LessonDto
     {
         [JsonPropertyName("lessonId")]
         public string? LessonId { get; set; }
@@ -483,13 +476,13 @@ public static class EmbeddedContentLoader
         public double MinimumAccuracy { get; set; }
     }
 
-    private sealed class PassagesDocument
+    internal sealed class PassagesDocument
     {
         [JsonPropertyName("passages")]
         public List<PassageDto>? Passages { get; set; }
     }
 
-    private sealed class PassageDto
+    internal sealed class PassageDto
     {
         [JsonPropertyName("id")]
         public string? Id { get; set; }
@@ -501,7 +494,7 @@ public static class EmbeddedContentLoader
         public string? Text { get; set; }
     }
 
-    private sealed class WordsDocument
+    internal sealed class WordsDocument
     {
         [JsonPropertyName("words")]
         public List<string>? Words { get; set; }
@@ -538,13 +531,13 @@ public static class EmbeddedContentLoader
             ])
     ];
 
-    private sealed class CoursesDocument
+    internal sealed class CoursesDocument
     {
         [JsonPropertyName("tracks")]
         public List<TrackDto>? Tracks { get; set; }
     }
 
-    private sealed class TrackDto
+    internal sealed class TrackDto
     {
         [JsonPropertyName("trackId")]
         public string? TrackId { get; set; }
@@ -562,7 +555,7 @@ public static class EmbeddedContentLoader
         public List<UnitDto>? Units { get; set; }
     }
 
-    private sealed class UnitDto
+    internal sealed class UnitDto
     {
         [JsonPropertyName("unitNumber")]
         public int UnitNumber { get; set; }
@@ -580,7 +573,7 @@ public static class EmbeddedContentLoader
         public List<ExerciseDto>? Exercises { get; set; }
     }
 
-    private sealed class ExerciseDto
+    internal sealed class ExerciseDto
     {
         [JsonPropertyName("exerciseId")]
         public string? ExerciseId { get; set; }
@@ -609,4 +602,16 @@ public static class EmbeddedContentLoader
         [JsonPropertyName("minimumAccuracy")]
         public double MinimumAccuracy { get; set; }
     }
+}
+
+[JsonSourceGenerationOptions(
+    PropertyNameCaseInsensitive = true,
+    ReadCommentHandling = JsonCommentHandling.Skip,
+    AllowTrailingCommas = true)]
+[JsonSerializable(typeof(EmbeddedContentLoader.CurriculumDocument))]
+[JsonSerializable(typeof(EmbeddedContentLoader.PassagesDocument))]
+[JsonSerializable(typeof(EmbeddedContentLoader.CoursesDocument))]
+[JsonSerializable(typeof(EmbeddedContentLoader.WordsDocument))]
+internal sealed partial class EmbeddedContentJsonContext : JsonSerializerContext
+{
 }

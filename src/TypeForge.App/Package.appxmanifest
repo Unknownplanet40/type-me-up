@@ -11,14 +11,14 @@
 
   <Identity
     Name="97C73A5B-B38C-422B-88BD-E94C1FD3E600"
-    Publisher="CN=AppPublisher"
+    Publisher="CN=TypeForge"
     Version="1.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="97C73A5B-B38C-422B-88BD-E94C1FD3E600" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>TypeForge.App</DisplayName>
-    <PublisherDisplayName>AppPublisher</PublisherDisplayName>
+    <DisplayName>TypeForge</DisplayName>
+    <PublisherDisplayName>TypeForge</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
     <uap10:PackageIntegrity>
       <uap10:Content Enforcement="on"/>
@@ -39,8 +39,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="TypeForge.App"
-        Description="TypeForge.App"
+        DisplayName="TypeForge"
+        Description="Offline-first adaptive touch typing tutor for Windows"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">

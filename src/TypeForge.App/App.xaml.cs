@@ -23,7 +23,22 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        UnhandledException += OnAppUnhandledException;
         Services = ConfigureServices();
+    }
+
+    private static void OnAppUnhandledException(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e)
+    {
+        try
+        {
+            string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TypeForge");
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "last-error.log"), $"{DateTimeOffset.UtcNow:O}\n{e.Message}\n{e.Exception}");
+        }
+        catch
+        {
+            // Ignore logging failures during termination.
+        }
     }
 
     public static T GetService<T>() where T : class
@@ -57,6 +72,7 @@ public partial class App : Application
         services.AddSingleton<CourseCatalogService>();
         services.AddSingleton<ITypeForgeStateService, TypeForgeStateService>();
         services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IKeystrokeAudioService, KeystrokeAudioService>();
 
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<PracticeViewModel>();

@@ -10,6 +10,7 @@ public sealed partial class PracticeViewModel : ObservableObject
 {
     private readonly ITypeForgeStateService _state;
     private readonly INavigationService _navigation;
+    private readonly IKeystrokeAudioService _audio;
     private TypingEngine _engine = null!;
     private TimeSpan? _timedLimit;
 
@@ -79,10 +80,14 @@ public sealed partial class PracticeViewModel : ObservableObject
 
     public event Action<TypingSnapshot>? SnapshotUpdated;
 
-    public PracticeViewModel(ITypeForgeStateService state, INavigationService navigation)
+    public PracticeViewModel(
+        ITypeForgeStateService state,
+        INavigationService navigation,
+        IKeystrokeAudioService audio)
     {
         _state = state;
         _navigation = navigation;
+        _audio = audio;
         IsMuted = !_state.Settings.SoundEnabled;
         LoadPendingSession();
     }
@@ -115,10 +120,26 @@ public sealed partial class PracticeViewModel : ObservableObject
             return false;
         }
 
+        TypingSnapshot preSnapshot = _engine.GetSnapshot();
+        bool isExpectedChar = preSnapshot.CursorIndex < preSnapshot.TargetText.Length
+            && preSnapshot.TargetText[preSnapshot.CursorIndex] == inputChar;
+
         bool accepted = _engine.ProcessKeystroke(inputChar);
         if (!accepted)
         {
             return false;
+        }
+
+        if (!IsMuted)
+        {
+            if (isExpectedChar)
+            {
+                _audio.PlayClick();
+            }
+            else
+            {
+                _audio.PlayMistake();
+            }
         }
 
         PublishSnapshot();
@@ -179,8 +200,7 @@ public sealed partial class PracticeViewModel : ObservableObject
     [RelayCommand]
     public void NextDrill()
     {
-        string drillText = _state.BuildAdaptivePracticeText(LastResult);
-        _state.QueuePracticeSession("Adaptive Practice · Keybr Focus", drillText, SessionType.AdaptivePractice);
+        _state.QueueNextDrill(LastResult);
         LoadPendingSession();
     }
 

@@ -33,57 +33,46 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore TypeForge.sln
 
-      - name: Build
-        run: dotnet build -c Release -r win-x64 --no-restore
+      - name: Test Core
+        run: dotnet test tests/TypeForge.Tests/TypeForge.Tests.csproj -c Release --no-restore
 
-      - name: Package MSIX (self-signed dev cert only; trusted signing required for public distribution)
+      - name: Publish Self-Contained WinUI3 App (win-x64)
         run: |
-          dotnet publish -c Release -r win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageDir="bin\Dist\" /p:AppxPackageSigningEnabled=true /p:PackageCertificateThumbprint="DEV_ONLY_THUMBPRINT"
+          dotnet publish src/TypeForge.App/TypeForge.App.csproj -c Release -r win-x64 -p:Platform=x64 --self-contained true -o dist/TypeForge-win-x64
 
-      - name: Generate .appinstaller
+      - name: Package Portable Archive
         shell: pwsh
         run: |
           $version = Get-Content VERSION -Raw | ForEach-Object { $_.Trim() }
-          $appinstaller = @"
-          <?xml version="1.0" encoding="utf-8"?>
-          <AppInstaller xmlns="http://schemas.microsoft.com/appx/appinstaller/2021" Version="$version.0" Uri="https://updates.example.com/app/${{ github.event.repository.name }}.appinstaller">
-            <MainPackage Name="YourCompany.YourApp" Publisher="CN=YourNameOrCompany" Version="$version.0" ProcessorArchitecture="x64" Uri="https://updates.example.com/packages/${{ github.event.repository.name }}_$version.0_x64.msix" />
-            <UpdateSettings><OnLaunch HoursBetweenUpdateChecks="0" ShowPrompt="true" UpdateBlocksActivation="false" /></UpdateSettings>
-          </AppInstaller>
-          "@
-          Set-Content -Path "${{ github.event.repository.name }}.appinstaller" -Value $appinstaller
+          New-Item -ItemType Directory -Force -Path bin/Dist | Out-Null
+          Compress-Archive -Path "dist/TypeForge-win-x64/*" -DestinationPath "bin/Dist/TypeForge-v$version-win-x64.zip" -Force
 
-      - name: Create GitHub Release
+      - name: Ensure GitHub Release Exists and Upload Binary Archive
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
           VERSION=$(cat VERSION | tr -d '[:space:]')
-          gh release create "v${VERSION}" --title "${{ github.event.repository.name }} v${VERSION}" --generate-notes
-
-      - name: Upload MSIX and .appinstaller to release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION=$(cat VERSION | tr -d '[:space:]')
-          gh release upload "v${VERSION}" "bin/Dist/*" --clobber || true
-          gh release upload "v${VERSION}" "${{ github.event.repository.name }}.appinstaller" --clobber || true
+          if ! gh release view "v${VERSION}" >/dev/null 2>&1; then
+            gh release create "v${VERSION}" --title "${{ github.event.repository.name }} v${VERSION}" --generate-notes
+          fi
+          gh release upload "v${VERSION}" "bin/Dist/TypeForge-v${VERSION}-win-x64.zip" --clobber
 
       - name: Update version.json
         shell: bash
         run: |
           set -euo pipefail
           VERSION=$(cat VERSION | tr -d '[:space:]')
+          ZIP_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/TypeForge-v${VERSION}-win-x64.zip"
           cat > version.json <<EOF
           {
             "name": "${{ github.event.repository.name }}",
             "version": "${VERSION}",
-            "channel": "stable"
+            "channel": "stable",
+            "download_url": "${ZIP_URL}"
           }
           EOF
           git config user.name "github-actions[bot]"
@@ -95,10 +84,8 @@ jobs:
         if: failure()
         shell: pwsh
         run: |
-          Write-Host "=== MSIX ==="
+          Write-Host "=== Dist ==="
           Get-ChildItem "bin/Dist" -Recurse -File -ErrorAction SilentlyContinue | Select-Object FullName, Length
-          Write-Host "=== AppInstaller ==="
-          Get-ChildItem "*.appinstaller" -ErrorAction SilentlyContinue | Select-Object Name, Length
           Write-Host "=== VERSION ==="
           Get-Content VERSION -ErrorAction SilentlyContinue
       - name: Upload debug artifacts
@@ -106,6 +93,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: winui3-debug
-          path: |
-            bin/Dist/
-            *.appinstaller
+          path: bin/Dist/
