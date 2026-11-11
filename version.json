@@ -1,5 +1,6 @@
 {
   "name": "-type-me-up",
   "version": "0.1.0",
-  "channel": "stable"
+  "channel": "stable",
+  "download_url": "https://github.com/Unknownplanet40/-type-me-up/releases/download/v0.1.0/TypeForge-v0.1.0-win-x64.zip"
 }
