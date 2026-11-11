@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="TypeForge.App.Views.PracticePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:TypeForge.App.Controls"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    IsTabStop="True"
+    HorizontalAlignment="Stretch"
+    VerticalAlignment="Stretch"
+    PointerEntered="Root_PointerEntered"
+    PointerExited="Root_PointerExited"
+    PointerPressed="Root_PointerPressed"
+    CharacterReceived="Page_CharacterReceived"
+    PreviewKeyDown="Page_PreviewKeyDown"
+    mc:Ignorable="d">
+
+    <Grid Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <Grid Padding="40,14,40,20" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 1. Quiet Metrics Line + Far-Right Daily Goal Bar -->
+            <Grid Grid.Row="0" HorizontalAlignment="Stretch" Padding="0,4,0,6">
+                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <TextBlock Text="{x:Bind ViewModel.WpmText, Mode=OneWay}" FontSize="13" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" Opacity="0.86" />
+                    <TextBlock Text="·" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.AccuracyText, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    <TextBlock Text="·" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.MistakesText, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    <TextBlock Text="·" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    <TextBlock Text="{x:Bind ViewModel.ElapsedText, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{x:Bind ViewModel.DailyGoalText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                    <Border Background="#1B1B20" CornerRadius="2" Width="96" Height="4" VerticalAlignment="Center">
+                        <Border x:Name="DailyGoalFill" Background="{ThemeResource ForgePurpleBrush}" CornerRadius="2" Width="0" Height="4" HorizontalAlignment="Left" Opacity="0.85" />
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <!-- 2. Letter Mastery Pill Strip + Hover Controls -->
+            <Grid Grid.Row="1" Margin="0,12,0,0" HorizontalAlignment="Stretch">
+                <StackPanel x:Name="KeyPillsPanel" Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+                <StackPanel
+                    x:Name="HoverControls"
+                    Orientation="Horizontal"
+                    Spacing="4"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Opacity="0">
+                    <StackPanel.OpacityTransition>
+                        <ScalarTransition Duration="0:0:0.18" />
+                    </StackPanel.OpacityTransition>
+                    <Button Click="BtnMute_Click" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Mute keystroke sound">
+                        <FontIcon x:Name="IconMute" Glyph="&#xE767;" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    </Button>
+                    <Button Click="BtnRestart_Click" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Restart prompt (Tab)">
+                        <FontIcon Glyph="&#xE72C;" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    </Button>
+                    <Button Click="BtnFocus_Click" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Zen / Fullscreen mode (Esc)">
+                        <FontIcon Glyph="&#xE740;" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- 3. Large Centered Live Typing Stream -->
+            <Grid Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24,16" MaxWidth="920">
+                <RichTextBlock
+                    x:Name="TypingStreamBlock"
+                    FontFamily="Cascadia Mono, Consolas"
+                    FontSize="{x:Bind ViewModel.TypingFontSize, Mode=OneWay}"
+                    LineHeight="50"
+                    CharacterSpacing="28"
+                    TextAlignment="Center"
+                    IsTextSelectionEnabled="False">
+                    <Paragraph x:Name="StreamParagraph" />
+                </RichTextBlock>
+            </Grid>
+
+            <!-- 4. Live Virtual QWERTY Keyboard -->
+            <controls:VirtualKeyboardControl
+                x:Name="VirtualKeyboard"
+                Grid.Row="3"
+                HorizontalAlignment="Center"
+                Margin="0,4,0,8" />
+        </Grid>
+
+        <!-- Post-Session Results Overlay -->
+        <Grid
+            x:Name="ResultsOverlay"
+            Visibility="{x:Bind ViewModel.IsResultsVisible, Mode=OneWay}"
+            Background="#B8000000">
+            <Border
+                Background="{ThemeResource ForgeCardBrush}"
+                BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                BorderThickness="1"
+                CornerRadius="14"
+                Padding="28"
+                Width="460"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <StackPanel Spacing="18">
+                    <StackPanel Spacing="4" HorizontalAlignment="Center">
+                        <TextBlock Text="Session Complete" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" HorizontalAlignment="Center" />
+                        <TextBlock Text="{x:Bind ViewModel.PromptTitle, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                        <TextBlock Text="{x:Bind ViewModel.ResultStarsDisplay, Mode=OneWay}" FontSize="20" Foreground="{ThemeResource ForgeYellowBrush}" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="{ThemeResource ForgeCardInnerBrush}" CornerRadius="8" Padding="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.ResultWpm, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Net WPM" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="{ThemeResource ForgeCardInnerBrush}" CornerRadius="8" Padding="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.ResultAccuracy, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource ForgeGreenBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Accuracy" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{ThemeResource ForgeCardInnerBrush}" CornerRadius="8" Padding="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.ResultMistakes, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource ForgeRedBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Mistakes" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <TextBlock
+                        Text="{x:Bind ViewModel.ResultWeakKeysSummary, Mode=OneWay}"
+                        FontSize="12"
+                        Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                        TextWrapping="Wrap"
+                        HorizontalAlignment="Center" />
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="Review Weak Keys" Style="{StaticResource ForgePrimaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnReviewWeakKeys_Click" />
+                        <Button Grid.Column="1" Content="Next Drill" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnNextDrill_Click" />
+                        <Button Grid.Column="2" Content="Repeat" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnRepeat_Click" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Page>

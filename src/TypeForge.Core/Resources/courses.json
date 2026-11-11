@@ -1,0 +1,675 @@
+{
+  "tracks": [
+    {
+      "trackId": "fast_touch",
+      "title": "Fast Touch Typing Course",
+      "description": "Learn all letter keys, punctuation, and capitalization with all ten fingers without looking at the keyboard.",
+      "durationEstimate": "3:10 - 5:20 hours",
+      "units": [
+        {
+          "unitNumber": 1,
+          "title": "The Home Row",
+          "focusKeys": "asdfjkl;",
+          "ergonomicTip": "Keep wrists neutral and hover above the desk. Rest your left index finger on F and right index finger on J using the tactile bumps.",
+          "exercises": [
+            {
+              "exerciseId": "ft_01_01",
+              "orderIndex": 1,
+              "title": "1.1 Touch typing basics",
+              "kind": "Tip",
+              "estimatedMinutes": "2 min.",
+              "tipContent": "Sit upright with feet flat on the floor and elbows bent near 90 degrees. Keep your eyes on the screen instead of looking at your hands so your fingers build automatic spatial memory.",
+              "practiceText": "",
+              "minimumNetWpm": 0,
+              "minimumAccuracy": 0
+            },
+            {
+              "exerciseId": "ft_01_02",
+              "orderIndex": 2,
+              "title": "1.2 New keys: Home row",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Place left fingers on A S D F and right fingers on J K L ;. Tap lightly and let thumbs rest naturally over the spacebar.",
+              "practiceText": "fff jjj ddd kkk sss lll aaa ;;; fj dk sl a; fjf jfj dfjk kjfd asdf jkl; ff jj dd kk ss ll aa ;;",
+              "minimumNetWpm": 15,
+              "minimumAccuracy": 90
+            },
+            {
+              "exerciseId": "ft_01_03",
+              "orderIndex": 3,
+              "title": "1.3 Understanding results",
+              "kind": "Tip",
+              "estimatedMinutes": "1 min.",
+              "tipContent": "Prioritize steady rhythm and 94%+ accuracy over rushing. Accuracy habits compound into effortless speed later in the course.",
+              "practiceText": "",
+              "minimumNetWpm": 0,
+              "minimumAccuracy": 0
+            },
+            {
+              "exerciseId": "ft_01_04",
+              "orderIndex": 4,
+              "title": "1.4 Key drill",
+              "kind": "KeyDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Tap each home row key briskly and bounce immediately back to idle tension.",
+              "practiceText": "fj dk sl a; jf kd ls ;a asdf jkl; fdsa ;lkj df jk sa kl fjdksla; ask lad sad dad all fall flask lass",
+              "minimumNetWpm": 18,
+              "minimumAccuracy": 92
+            },
+            {
+              "exerciseId": "ft_01_05",
+              "orderIndex": 5,
+              "title": "1.5 Word drill",
+              "kind": "WordDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Read ahead one word while keeping every finger anchored above ASDF and JKL;.",
+              "practiceText": "ask all lad sad dad fall salad flask lass alas add half daff ask all sad lad fall dad flask salad",
+              "minimumNetWpm": 20,
+              "minimumAccuracy": 92
+            },
+            {
+              "exerciseId": "ft_01_06",
+              "orderIndex": 6,
+              "title": "1.6 Paragraph drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Connect smooth word transitions using a light thumb tap on the spacebar.",
+              "practiceText": "a sad lad asks dad; a lass adds a salad; all falls fade fast; ask a lad; dad had a flask; all lads fall",
+              "minimumNetWpm": 22,
+              "minimumAccuracy": 93
+            }
+          ]
+        },
+        {
+          "unitNumber": 2,
+          "title": "Keys E and I",
+          "focusKeys": "ei",
+          "ergonomicTip": "Reach E with your left middle finger (above D) and I with your right middle finger (above K).",
+          "exercises": [
+            {
+              "exerciseId": "ft_02_01",
+              "orderIndex": 1,
+              "title": "2.1 New keys: E and I",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Extend only the middle finger upward from D to E and from K to I while keeping your index anchors near F and J.",
+              "practiceText": "ded kik ed ik de ki fee did see lie kid die fed led aid side slide file life idle",
+              "minimumNetWpm": 20,
+              "minimumAccuracy": 92
+            },
+            {
+              "exerciseId": "ft_02_02",
+              "orderIndex": 2,
+              "title": "2.2 Key & Word drill",
+              "kind": "WordDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Snap back cleanly to D and K between vowel reaches.",
+              "practiceText": "desk field slide isle said seal leaf deal safe seek fell keel lease ideal filled diesel",
+              "minimumNetWpm": 23,
+              "minimumAccuracy": 93
+            },
+            {
+              "exerciseId": "ft_02_03",
+              "orderIndex": 3,
+              "title": "2.3 Paragraph drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Maintain even timing between left-hand E and right-hand I strokes.",
+              "practiceText": "she likes a quiet desk; he sees a field side; all sails slide; feel a safe deal; kids like idle lakes",
+              "minimumNetWpm": 25,
+              "minimumAccuracy": 93
+            }
+          ]
+        },
+        {
+          "unitNumber": 3,
+          "title": "Keys R and U",
+          "focusKeys": "ru",
+          "ergonomicTip": "Reach R upward with left index finger (above F) and U upward with right index finger (above J).",
+          "exercises": [
+            {
+              "exerciseId": "ft_03_01",
+              "orderIndex": 1,
+              "title": "3.1 New keys: R and U",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Index fingers handle R and U cleanly while ring and pinky fingers stay relaxed on home row.",
+              "practiceText": "frf juj rf uj fur run user sure rule lure fire radius full rude true dull ride",
+              "minimumNetWpm": 22,
+              "minimumAccuracy": 92
+            },
+            {
+              "exerciseId": "ft_03_02",
+              "orderIndex": 2,
+              "title": "3.2 Word drill",
+              "kind": "WordDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Avoid lifting your wrists during index reaches.",
+              "practiceText": "read dear fear fair pair fluid solid rural rider slider ruler fuels sure fire lure user",
+              "minimumNetWpm": 25,
+              "minimumAccuracy": 93
+            },
+            {
+              "exerciseId": "ft_03_03",
+              "orderIndex": 3,
+              "title": "3.3 Paragraph drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Keep steady cadence across alternating index reaches.",
+              "practiceText": "real rules guide fair users; read dear files earlier; safe riders lurk beside clear lakes; full sails rise",
+              "minimumNetWpm": 27,
+              "minimumAccuracy": 94
+            }
+          ]
+        },
+        {
+          "unitNumber": 4,
+          "title": "Keys T and O",
+          "focusKeys": "to",
+          "ergonomicTip": "Reach T diagonally upward-right with left index (from F) and O upward with right ring finger (from L).",
+          "exercises": [
+            {
+              "exerciseId": "ft_04_01",
+              "orderIndex": 1,
+              "title": "4.1 New keys: T and O",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Keep left index smooth on T and avoid rotating the right hand when stretching ring finger to O.",
+              "practiceText": "ftf lol to ot rot lot dot look tool root food took sort foot store order floor",
+              "minimumNetWpm": 24,
+              "minimumAccuracy": 93
+            },
+            {
+              "exerciseId": "ft_04_02",
+              "orderIndex": 2,
+              "title": "4.2 Word drill",
+              "kind": "WordDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Feel the contrast between quick index T and soft ring finger O.",
+              "practiceText": "total letter outer little ratio float trail toast roster filter detail studio effort solid",
+              "minimumNetWpm": 27,
+              "minimumAccuracy": 94
+            },
+            {
+              "exerciseId": "ft_04_03",
+              "orderIndex": 3,
+              "title": "4.3 Paragraph drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Stay loose across high-frequency English combinations like to, of, it, and for.",
+              "practiceText": "our first studio tour takes a quiet route; little details sort fast if tools feel solid; trust our true effort",
+              "minimumNetWpm": 28,
+              "minimumAccuracy": 94
+            }
+          ]
+        },
+        {
+          "unitNumber": 5,
+          "title": "Capital letters and period",
+          "focusKeys": "A-Z.",
+          "ergonomicTip": "Always hold Shift with the opposite hand's pinky while pressing the letter key, and press period with your right ring finger.",
+          "exercises": [
+            {
+              "exerciseId": "ft_05_01",
+              "orderIndex": 1,
+              "title": "5.1 Shift rule & period",
+              "kind": "Tip",
+              "estimatedMinutes": "2 min.",
+              "tipContent": "Left hand letters use Right Shift. Right hand letters use Left Shift. Drop down to period with your right ring finger from L without twisting your forearm.",
+              "practiceText": "",
+              "minimumNetWpm": 0,
+              "minimumAccuracy": 0
+            },
+            {
+              "exerciseId": "ft_05_02",
+              "orderIndex": 2,
+              "title": "5.2 Capital & period drill",
+              "kind": "KeyDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Hold opposite Shift cleanly before pressing the letter, then release both smoothly.",
+              "practiceText": "Ask Dad. Tell Joe. Read Luis. Sort Kate. See Tara. Look out. Feel safe. Ride fast. Trust Lisa. Start late.",
+              "minimumNetWpm": 25,
+              "minimumAccuracy": 93
+            },
+            {
+              "exerciseId": "ft_05_03",
+              "orderIndex": 3,
+              "title": "5.3 Sentence flow drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Maintain rhythm across sentence boundaries: period, space, Shift, letter.",
+              "practiceText": "Luke took a fast tour. Rita likes quiet roads. Erik offered real help. Doris left earlier today.",
+              "minimumNetWpm": 28,
+              "minimumAccuracy": 94
+            }
+          ]
+        },
+        {
+          "unitNumber": 6,
+          "title": "Keys C and comma",
+          "focusKeys": "c,",
+          "ergonomicTip": "Curl left middle finger downward from D to C, and right middle finger downward from K to comma.",
+          "exercises": [
+            {
+              "exerciseId": "ft_06_01",
+              "orderIndex": 1,
+              "title": "6.1 New keys: C and comma",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Keep wrists stable and bend your middle fingers gently down to C and comma.",
+              "practiceText": "dcd k,k call, care, cool, card, core, fact, act, lock, clock, trace, track, clear, click, close",
+              "minimumNetWpm": 26,
+              "minimumAccuracy": 93
+            },
+            {
+              "exerciseId": "ft_06_02",
+              "orderIndex": 2,
+              "title": "6.2 Punctuated clause drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Pause briefly in your mind at commas rather than breaking finger posture.",
+              "practiceText": "Careful practice creates crisp results, clear focus, and steady control. Collect cold facts, sort cards, and close files.",
+              "minimumNetWpm": 29,
+              "minimumAccuracy": 94
+            }
+          ]
+        },
+        {
+          "unitNumber": 7,
+          "title": "Keys G, H and apostrophe",
+          "focusKeys": "gh'",
+          "ergonomicTip": "Slide index fingers sideways for G and H; stretch right pinky right from semicolon for apostrophe.",
+          "exercises": [
+            {
+              "exerciseId": "ft_07_01",
+              "orderIndex": 1,
+              "title": "7.1 New keys: G, H & apostrophe",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "G belongs to the left index and H to the right index. Return immediately to F and J anchors.",
+              "practiceText": "fgf jhj ;'; high, light, night, right, sight, hold, gold, it's, he's, she's, that's, there's, let's",
+              "minimumNetWpm": 27,
+              "minimumAccuracy": 94
+            },
+            {
+              "exerciseId": "ft_07_02",
+              "orderIndex": 2,
+              "title": "7.2 Contraction & story drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Flow naturally through common contractions without looking at the apostrophe key.",
+              "practiceText": "She's held that high ridge trail through thick fog. It's right here, though the light gets tight near dusk.",
+              "minimumNetWpm": 30,
+              "minimumAccuracy": 94
+            }
+          ]
+        },
+        {
+          "unitNumber": 8,
+          "title": "Keys V, N and question mark",
+          "focusKeys": "vn?",
+          "ergonomicTip": "Index fingers dip down to V and N; hold Left Shift with right pinky on slash for question mark.",
+          "exercises": [
+            {
+              "exerciseId": "ft_08_01",
+              "orderIndex": 1,
+              "title": "8.1 New keys: V, N & question mark",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Left index reaches V, right index reaches N. Combine Left Shift + / cleanly for ?.",
+              "practiceText": "fvf jnj vine nine fine over even never ever? can visit? need value? leave soon? did everyone arrive?",
+              "minimumNetWpm": 28,
+              "minimumAccuracy": 94
+            },
+            {
+              "exerciseId": "ft_08_02",
+              "orderIndex": 2,
+              "title": "8.2 Dialogue flow drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Anticipate Shift + question mark at the end of interrogative sentences.",
+              "practiceText": "Can seven runners cross the green valley tonight? Even if wind rises, will Nathan drive south? Let's check notes.",
+              "minimumNetWpm": 30,
+              "minimumAccuracy": 94
+            }
+          ]
+        },
+        {
+          "unitNumber": 9,
+          "title": "Keys W and M",
+          "focusKeys": "wm",
+          "ergonomicTip": "Reach W with left ring finger (above S) and M downward with right index finger (below J).",
+          "exercises": [
+            {
+              "exerciseId": "ft_09_01",
+              "orderIndex": 1,
+              "title": "9.1 New keys: W and M",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Right index owns both N and M; keep your right hand centered so M stays effortless.",
+              "practiceText": "sws jmj warm wind swim water time mind make move home world work calm flame frame dream stream",
+              "minimumNetWpm": 29,
+              "minimumAccuracy": 94
+            },
+            {
+              "exerciseId": "ft_09_02",
+              "orderIndex": 2,
+              "title": "9.2 Flow drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Smoothly blend W-starts and M-clusters at conversational speed.",
+              "practiceText": "Warm summer wind moves smoothly across calm mountain waters. Modern teams make smart milestones with minimal motion.",
+              "minimumNetWpm": 32,
+              "minimumAccuracy": 95
+            }
+          ]
+        },
+        {
+          "unitNumber": 10,
+          "title": "Keys Q and P",
+          "focusKeys": "qp",
+          "ergonomicTip": "Stretch outer pinky fingers upward from A to Q and from semicolon to P.",
+          "exercises": [
+            {
+              "exerciseId": "ft_10_01",
+              "orderIndex": 1,
+              "title": "10.1 New keys: Q and P",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Keep forearm neutral rather than twisting wrists when pinkies reach Q and P.",
+              "practiceText": "aqa ;p; quick quiet equal quite equip pace plan page keep help stop paper people point power",
+              "minimumNetWpm": 30,
+              "minimumAccuracy": 94
+            },
+            {
+              "exerciseId": "ft_10_02",
+              "orderIndex": 2,
+              "title": "10.2 Word & sentence drill",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Follow every Q promptly with U on your right index finger.",
+              "practiceText": "Quiet practice builds quick precision. Keep sharp plans prepared, polish reports quickly, and appreciate steady progress.",
+              "minimumNetWpm": 33,
+              "minimumAccuracy": 95
+            }
+          ]
+        },
+        {
+          "unitNumber": 11,
+          "title": "Keys B and Y",
+          "focusKeys": "by",
+          "ergonomicTip": "Stretch left index diagonally down-right to B and right index diagonally up-left to Y.",
+          "exercises": [
+            {
+              "exerciseId": "ft_11_01",
+              "orderIndex": 1,
+              "title": "11.1 New keys: B and Y",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Use strict hand discipline: B with left index and Y with right index.",
+              "practiceText": "fbf jyj buy bay by boy body able blue build busy yellow young year yield always every story",
+              "minimumNetWpm": 32,
+              "minimumAccuracy": 94
+            },
+            {
+              "exerciseId": "ft_11_02",
+              "orderIndex": 2,
+              "title": "11.2 Rhythm paragraph",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Combine full-row motion with light consistent bounce back to F and J.",
+              "practiceText": "Busy builders verify every layout by noon. Young players quickly obey yellow boundary signs beyond the bay.",
+              "minimumNetWpm": 34,
+              "minimumAccuracy": 95
+            }
+          ]
+        },
+        {
+          "unitNumber": 12,
+          "title": "Keys Z and X",
+          "focusKeys": "zx",
+          "ergonomicTip": "Drop left pinky to Z and left ring finger to X while keeping your right hand calm and ready.",
+          "exercises": [
+            {
+              "exerciseId": "ft_12_01",
+              "orderIndex": 1,
+              "title": "12.1 New keys: Z and X",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Stay crisp on outer bottom reaches: A to Z and S to X.",
+              "practiceText": "aza sxs zero zone size zoom gaze exact extra example next six mix fix text flex box fox",
+              "minimumNetWpm": 33,
+              "minimumAccuracy": 95
+            },
+            {
+              "exerciseId": "ft_12_02",
+              "orderIndex": 2,
+              "title": "12.2 Full-keyboard graduation",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "4 - 5 min.",
+              "tipContent": "Celebrate mastering all 26 letters with smooth eye-ahead pangram flow.",
+              "practiceText": "The quick brown fox jumps over a lazy dog near six quiet plazas. Amazing dexterity and focus yield exact results every single day.",
+              "minimumNetWpm": 36,
+              "minimumAccuracy": 95
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "trackId": "speed_building",
+      "title": "Speed Building Course",
+      "description": "Accelerate fluency through high-frequency bigrams, common English bursts, and sustained prose rhythm.",
+      "durationEstimate": "1:30 - 2:15 hours",
+      "units": [
+        {
+          "unitNumber": 1,
+          "title": "High-Frequency Bigrams",
+          "focusKeys": "th he in er an re",
+          "ergonomicTip": "Read pairs as a single rhythmic beat rather than separate characters.",
+          "exercises": [
+            {
+              "exerciseId": "sb_01_01",
+              "orderIndex": 1,
+              "title": "1.1 Cadence theory",
+              "kind": "Tip",
+              "estimatedMinutes": "1 min.",
+              "tipContent": "Speed comes from uniform rhythm, not frantic bursts. Group 2-letter clusters like th, in, er, and an into single fluid gestures.",
+              "practiceText": "",
+              "minimumNetWpm": 0,
+              "minimumAccuracy": 0
+            },
+            {
+              "exerciseId": "sb_01_02",
+              "orderIndex": 2,
+              "title": "1.2 Bigram speed bursts",
+              "kind": "KeyDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Keep motion compact and light across common digraphs.",
+              "practiceText": "the there their other another here where when then than in into inner water later better never clever",
+              "minimumNetWpm": 40,
+              "minimumAccuracy": 95
+            },
+            {
+              "exerciseId": "sb_01_03",
+              "orderIndex": 3,
+              "title": "1.3 Rhythm prose sprint",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "4 - 5 min.",
+              "tipContent": "Scan two words ahead so your fingers stay continuously in motion.",
+              "practiceText": "Consistent timing carries every finger across the board without wasted motion. When rhythm holds steady, accuracy remains crisp even as speed rises.",
+              "minimumNetWpm": 45,
+              "minimumAccuracy": 95
+            }
+          ]
+        },
+        {
+          "unitNumber": 2,
+          "title": "Alternating Hand Agility",
+          "focusKeys": "hand-swap",
+          "ergonomicTip": "Use alternating-hand sequences to release tension on one hand while the other executes.",
+          "exercises": [
+            {
+              "exerciseId": "sb_02_01",
+              "orderIndex": 1,
+              "title": "2.1 Cross-hand patterns",
+              "kind": "WordDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Anticipate the opposite hand's stroke right as the current key bottoms out.",
+              "practiceText": "work form right make world island social signal panel turn handle ancient city problem focus",
+              "minimumNetWpm": 45,
+              "minimumAccuracy": 95
+            },
+            {
+              "exerciseId": "sb_02_02",
+              "orderIndex": 2,
+              "title": "2.2 Endurance fluency run",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "5 min.",
+              "tipContent": "Breathe evenly through longer clauses and trust home row recovery.",
+              "practiceText": "Authentic mastery appears when complex technical sentences flow calmly across your desk. Maintain balanced posture and let precision guide every single stroke.",
+              "minimumNetWpm": 50,
+              "minimumAccuracy": 96
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "trackId": "numbers",
+      "title": "Numbers Course",
+      "description": "Build blind touch-typing accuracy across the entire top number row paired with natural dates, currency, and counts.",
+      "durationEstimate": "45 - 65 min",
+      "units": [
+        {
+          "unitNumber": 1,
+          "title": "Inner Numbers 4, 5, 6, 7",
+          "focusKeys": "4567",
+          "ergonomicTip": "Extend index fingers upward cleanly from F to 4/5 and from J to 6/7 without drifting off home row.",
+          "exercises": [
+            {
+              "exerciseId": "num_01_01",
+              "orderIndex": 1,
+              "title": "1.1 Index number reaches",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 min.",
+              "tipContent": "Left index covers 4 and 5; right index covers 6 and 7.",
+              "practiceText": "44 55 66 77 45 54 67 76 456 765 547 645 4567 7654 page 45 item 67 room 546",
+              "minimumNetWpm": 25,
+              "minimumAccuracy": 93
+            },
+            {
+              "exerciseId": "num_01_02",
+              "orderIndex": 2,
+              "title": "1.2 Contextual number drill",
+              "kind": "WordDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Return promptly to F and J after every digit cluster.",
+              "practiceText": "Batch 45 ships at 6:47 today; order 574 cases for aisle 65 and route 764.",
+              "minimumNetWpm": 28,
+              "minimumAccuracy": 94
+            }
+          ]
+        },
+        {
+          "unitNumber": 2,
+          "title": "Full Top Row 0 to 9",
+          "focusKeys": "123890",
+          "ergonomicTip": "Align outer fingers smoothly: 1(pinky) 2(ring) 3(middle) on left, 8(middle) 9(ring) 0(pinky) on right.",
+          "exercises": [
+            {
+              "exerciseId": "num_02_01",
+              "orderIndex": 1,
+              "title": "2.1 Outer digits drill",
+              "kind": "KeyDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Keep home row orientation even across upper-corner stretches to 1 and 0.",
+              "practiceText": "123 890 19 28 37 46 50 1024 2048 1980 2026 3890 1209 port 8080 build 301",
+              "minimumNetWpm": 26,
+              "minimumAccuracy": 94
+            },
+            {
+              "exerciseId": "num_02_02",
+              "orderIndex": 2,
+              "title": "2.2 Dates, versions & metrics",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "4 - 5 min.",
+              "tipContent": "Blend prose and numbers cleanly without pausing at separators.",
+              "practiceText": "Release 2.40 ships on 2026-11-12 with 98.5% test coverage across 1,024 samples and 360 target nodes.",
+              "minimumNetWpm": 30,
+              "minimumAccuracy": 95
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "trackId": "special_marks",
+      "title": "Special Marks Course",
+      "description": "Master brackets, quotes, slashes, symbols, and programming syntax without glancing down.",
+      "durationEstimate": "40 - 60 min",
+      "units": [
+        {
+          "unitNumber": 1,
+          "title": "Delimiters & Brackets",
+          "focusKeys": "()[]{}",
+          "ergonomicTip": "Stretch right pinky lightly for brackets and maintain clean opposite-Shift control for parentheses and braces.",
+          "exercises": [
+            {
+              "exerciseId": "sym_01_01",
+              "orderIndex": 1,
+              "title": "1.1 Parentheses & brackets",
+              "kind": "NewKeys",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Use Left Shift with right ring/pinky for ( ) and [ ] { }.",
+              "practiceText": "() [] {} (a) [b] {c} fn(x) arr[0] map{id} get(item, idx) [1, 2, 3]",
+              "minimumNetWpm": 24,
+              "minimumAccuracy": 93
+            },
+            {
+              "exerciseId": "sym_01_02",
+              "orderIndex": 2,
+              "title": "1.2 Quotes & separators",
+              "kind": "WordDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Pair single quotes, double quotes, colons, and semicolons crisply.",
+              "practiceText": "\"id\": 42; 'mode': \"dark\"; items: [\"fast\", \"clean\"]; user_name = \"alex\";",
+              "minimumNetWpm": 26,
+              "minimumAccuracy": 94
+            }
+          ]
+        },
+        {
+          "unitNumber": 2,
+          "title": "Operators & Expressions",
+          "focusKeys": "+=-_/*&|!",
+          "ergonomicTip": "Stay centered on F and J so upper-right reaches for minus, plus, equals, and underscore don't shift your whole palm.",
+          "exercises": [
+            {
+              "exerciseId": "sym_02_01",
+              "orderIndex": 1,
+              "title": "2.1 Logic & math operators",
+              "kind": "KeyDrill",
+              "estimatedMinutes": "3 - 5 min.",
+              "tipContent": "Anchor both pinkies steadily back to A and semicolon.",
+              "practiceText": "a + b = c; x != y; total_count += 1; rate >= 95 && speed <= 400; path/to/file.cs",
+              "minimumNetWpm": 26,
+              "minimumAccuracy": 94
+            },
+            {
+              "exerciseId": "sym_02_02",
+              "orderIndex": 2,
+              "title": "2.2 Technical syntax flow",
+              "kind": "ParagraphDrill",
+              "estimatedMinutes": "4 - 5 min.",
+              "tipContent": "Keep fluid cadence across mixed identifiers and punctuation.",
+              "practiceText": "if (score >= 95 && errors == 0) { status = \"passed\"; } // verify output @ 100%",
+              "minimumNetWpm": 28,
+              "minimumAccuracy": 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

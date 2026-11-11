@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Window
+    x:Class="TypeForge.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Title="TypeForge"
+    mc:Ignorable="d">
+    <Window.SystemBackdrop>
+        <DesktopAcrylicBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="RootGrid" RequestedTheme="Dark" Background="{ThemeResource ForgeCanvasBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition x:Name="TopBarRow" Height="32" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Ultra-Thin 32px Top Bar Aligned 1:1 with Windows Caption Controls -->
+        <Grid x:Name="TopBarContainer" Grid.Row="0" Height="32" Background="{ThemeResource ForgeTopBarBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Padding="24,0,12,0" VerticalAlignment="Center">
+                <TextBlock
+                    Text="TypeForge"
+                    FontSize="13"
+                    FontWeight="SemiBold"
+                    Foreground="{ThemeResource ForgeTextPrimaryBrush}"
+                    VerticalAlignment="Center" />
+
+                <Border Width="1" Height="11" Background="{ThemeResource ForgeHairlineBrush}" VerticalAlignment="Center" />
+
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <Button x:Name="NavPractice" Tag="practice" Click="NavItem_Click" AutomationProperties.Name="Practice" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
+                        <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock x:Name="LblPractice" Text="Practice" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <Border x:Name="DotPractice" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Visible" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="NavCourse" Tag="course" Click="NavItem_Click" AutomationProperties.Name="Course" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
+                        <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock x:Name="LblCourse" Text="Course" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                            <Border x:Name="DotCourse" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="NavTest" Tag="test" Click="NavItem_Click" AutomationProperties.Name="Test" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
+                        <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock x:Name="LblTest" Text="Test" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                            <Border x:Name="DotTest" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="NavStatistics" Tag="statistics" Click="NavItem_Click" AutomationProperties.Name="Stats" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
+                        <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock x:Name="LblStatistics" Text="Stats" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                            <Border x:Name="DotStatistics" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+
+            <Border x:Name="TitleBarDragRegion" Grid.Column="1" Background="Transparent" />
+
+            <StackPanel x:Name="TopBarRightGroup" Grid.Column="2" Orientation="Horizontal" Spacing="6" Margin="0,0,144,0" VerticalAlignment="Center">
+                <Border
+                    Background="{ThemeResource ForgeCardBrush}"
+                    BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                    BorderThickness="1"
+                    CornerRadius="11"
+                    Height="22"
+                    Padding="8,0"
+                    ToolTipService.ToolTip="Daily practice streak">
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                        <Path
+                            Data="M 6,0 C 6,0 10.5,4.2 10.5,8.2 A 4.5,4.5 0 0 1 1.5,8.2 C 1.5,6 2.8,4 2.8,4 C 2.8,4 3.4,5.7 4.7,5.7 C 4.7,3.5 6,0 6,0 Z"
+                            Fill="{ThemeResource ForgeFlameBrush}"
+                            Width="10"
+                            Height="12"
+                            Stretch="Uniform"
+                            VerticalAlignment="Center" />
+                        <TextBlock
+                            Text="{x:Bind ViewModel.StreakDays, Mode=OneWay}"
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Foreground="{ThemeResource ForgeTextPrimaryBrush}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <Button
+                    x:Name="NavSettings"
+                    Tag="settings"
+                    Click="NavItem_Click"
+                    Height="26"
+                    Width="28"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    CornerRadius="5"
+                    Padding="0"
+                    VerticalAlignment="Center"
+                    ToolTipService.ToolTip="Settings"
+                    AutomationProperties.Name="Settings">
+                    <FontIcon x:Name="IconSettings" Glyph="&#xE713;" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Frame x:Name="ContentFrame" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
+
+            <Button
+                x:Name="BtnFocusExit"
+                Visibility="Collapsed"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Margin="0,12,24,0"
+                Background="{ThemeResource ForgeCardBrush}"
+                BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="10,5"
+                Opacity="0.65"
+                Click="BtnFocusExit_Click">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon Glyph="&#xE73F;" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    <TextBlock Text="Esc" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                </StackPanel>
+            </Button>
+        </Grid>
+    </Grid>
+</Window>

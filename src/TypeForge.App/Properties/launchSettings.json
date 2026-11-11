@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TypeForge.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "TypeForge.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

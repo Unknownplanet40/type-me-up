@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="TypeForge.App.Views.CoursePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    HorizontalAlignment="Stretch"
+    mc:Ignorable="d">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalAlignment="Stretch">
+        <Grid Padding="40,16,40,36" RowSpacing="18" HorizontalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header & Track Actions -->
+            <Grid Grid.Row="0" ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        x:Name="CourseTrackTitle"
+                        Text="{x:Bind ViewModel.ActiveTrack.Title, Mode=OneWay}"
+                        FontSize="26"
+                        FontWeight="SemiBold"
+                        Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                    <TextBlock
+                        x:Name="CourseTrackDesc"
+                        Text="{x:Bind ViewModel.ActiveTrack.Description, Mode=OneWay}"
+                        FontSize="13"
+                        Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                    <Button
+                        Content="Change Course"
+                        Style="{StaticResource ForgeSecondaryButtonStyle}"
+                        AutomationProperties.Name="Change active typing course"
+                        Click="ChangeCourse_Click" />
+                    <Button
+                        Content="Continue Lesson"
+                        Style="{StaticResource ForgePrimaryButtonStyle}"
+                        AutomationProperties.Name="Continue current lesson exercise"
+                        Click="ContinueLesson_Click" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Selectable Course Catalog Panel (toggled by Change Course) -->
+            <Border
+                x:Name="CourseCatalogPanel"
+                Grid.Row="1"
+                Visibility="Collapsed"
+                Style="{StaticResource ForgeCardStyle}">
+                <StackPanel Spacing="14">
+                    <Grid>
+                        <TextBlock Text="Choose Course Track" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                        <Button Content="Close" Style="{StaticResource ForgeSubtleIconButtonStyle}" HorizontalAlignment="Right" Click="ChangeCourse_Click" />
+                    </Grid>
+                    <StackPanel x:Name="CatalogTracksHost" Spacing="10" />
+                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="14">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="Extra Specialized Courses" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                <TextBlock Text="Numbers Row &amp; Special Programming Marks courses" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                            </StackPanel>
+                            <ComboBox
+                                Grid.Column="1"
+                                MinWidth="210"
+                                ItemsSource="{x:Bind ViewModel.ExtraTracks, Mode=OneWay}"
+                                DisplayMemberPath="Title"
+                                SelectedIndex="{x:Bind ViewModel.SelectedExtraTrackIndex, Mode=TwoWay}"
+                                VerticalAlignment="Center" />
+                            <Button
+                                Grid.Column="2"
+                                Content="Select Course"
+                                Style="{StaticResource ForgePrimaryButtonStyle}"
+                                Click="StartExtraCourse_Click" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Numbered Lesson Unit Tabs (1..12) -->
+            <Border Grid.Row="2" Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12,10">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Lessons" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextMutedBrush}" />
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="UnitTabsPanel" Orientation="Horizontal" Spacing="2" />
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+
+            <!-- Active Lesson Unit Steps + Optional Inline Tip Viewer -->
+            <Grid Grid.Row="3" ColumnSpacing="18" HorizontalAlignment="Stretch">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.4*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Style="{StaticResource ForgeCardStyle}">
+                    <StackPanel Spacing="14">
+                        <Grid>
+                            <StackPanel Spacing="2">
+                                <TextBlock x:Name="ActiveUnitHeading" Text="Lesson 1: The Home Row" FontSize="19" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                <TextBlock x:Name="ActiveUnitFocusKeys" Text="Focus keys: asdfjkl;" FontSize="12" Foreground="{ThemeResource ForgePurpleBrush}" />
+                            </StackPanel>
+                            <Border x:Name="OptimalBadge" Background="{ThemeResource ForgePurpleSoftBrush}" BorderBrush="{ThemeResource ForgePurpleBrush}" BorderThickness="1" CornerRadius="6" Padding="8,4" HorizontalAlignment="Right" VerticalAlignment="Top">
+                                <TextBlock Text="Optimal Duration Active" FontSize="11" FontWeight="SemiBold" Foreground="{ThemeResource ForgePurpleBrush}" />
+                            </Border>
+                        </Grid>
+
+                        <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <FontIcon Glyph="&#xE946;" FontSize="14" Foreground="{ThemeResource ForgePurpleBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                <TextBlock x:Name="ActiveUnitTip" Text="" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <StackPanel x:Name="ExercisesHost" Spacing="8" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Right Side Panel: Tip Detail Card OR Optimal Duration Info -->
+                <StackPanel Grid.Column="1" Spacing="14">
+                    <Border x:Name="TipDetailCard" Visibility="Collapsed" Style="{StaticResource ForgeCardStyle}" BorderBrush="{ThemeResource ForgePurpleBrush}" BorderThickness="1.5">
+                        <StackPanel Spacing="12">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE82F;" FontSize="16" Foreground="{ThemeResource ForgePurpleBrush}" />
+                                <TextBlock x:Name="TipDetailTitle" Text="Technique Tip" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            </StackPanel>
+                            <TextBlock x:Name="TipDetailBody" Text="" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" LineHeight="20" />
+                            <Button
+                                Content="Mark Tip Complete &amp; Next"
+                                Style="{StaticResource ForgePrimaryButtonStyle}"
+                                HorizontalAlignment="Left"
+                                Click="CompleteTip_Click" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource ForgeCardStyle}">
+                        <StackPanel Spacing="10">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE9D2;" FontSize="15" Foreground="{ThemeResource ForgePurpleBrush}" />
+                                <TextBlock Text="Optimal Duration" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            </StackPanel>
+                            <TextBlock
+                                Text="Exercise lengths adapt automatically when you hit 96%+ accuracy on earlier steps, saving time while preserving touch-typing mastery."
+                                FontSize="12"
+                                Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                                TextWrapping="Wrap"
+                                LineHeight="18" />
+                            <Button
+                                x:Name="BtnToggleOptimal"
+                                Content="{x:Bind ViewModel.OptimalDurationLabel, Mode=OneWay}"
+                                Style="{StaticResource ForgeSecondaryButtonStyle}"
+                                HorizontalAlignment="Left"
+                                Click="ToggleOptimalDuration_Click" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <!-- Course Progress Footer -->
+            <Border Grid.Row="4" Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="16,12">
+                <Grid ColumnSpacing="20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Spacing="6" VerticalAlignment="Center">
+                        <Grid>
+                            <TextBlock Text="Course Progress" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock x:Name="CourseProgressSummary" Text="0 / 0 steps" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Right" />
+                        </Grid>
+                        <ProgressBar x:Name="CourseProgressBar" Minimum="0" Maximum="100" Value="0" Height="6" Foreground="{ThemeResource ForgePurpleBrush}" />
+                    </StackPanel>
+                    <TextBlock
+                        Grid.Column="1"
+                        x:Name="CourseEstimateText"
+                        Text="Est. 3:10 - 5:20 hours"
+                        FontSize="12"
+                        Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                        VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</Page>

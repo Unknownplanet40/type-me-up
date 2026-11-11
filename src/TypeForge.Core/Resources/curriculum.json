@@ -1,0 +1,225 @@
+{
+  "levels": [
+    {
+      "levelId": 1,
+      "title": "Level 1 — Home Row",
+      "description": "Anchor index fingers on F and J and build muscle memory across the home row.",
+      "ergonomicTip": "Keep wrists neutral and hover lightly above the desk. Rest index fingers gently on the tactile bumps of F and J.",
+      "lessons": [
+        {
+          "lessonId": "L1_01",
+          "orderIndex": 1,
+          "title": "1.1 F & J Anchors",
+          "description": "Establish tactile home position on F and J.",
+          "targetCharacters": "fj",
+          "practiceText": "fff jjj fjf jfj ff jj fjfj jfjf fff jjj fjf jfj",
+          "difficulty": "Beginner",
+          "minimumNetWpm": 15,
+          "minimumAccuracy": 90
+        },
+        {
+          "lessonId": "L1_02",
+          "orderIndex": 2,
+          "title": "1.2 D & K Reach",
+          "description": "Train middle fingers cleanly on D and K.",
+          "targetCharacters": "dk",
+          "practiceText": "ddd kkk dfd jkj ddd kkk fkf jdj dfjk kjfd ddkk fjdk",
+          "difficulty": "Beginner",
+          "minimumNetWpm": 18,
+          "minimumAccuracy": 90
+        },
+        {
+          "lessonId": "L1_03",
+          "orderIndex": 3,
+          "title": "1.3 S & L Keys",
+          "description": "Develop ring-finger control with S and L.",
+          "targetCharacters": "sl",
+          "practiceText": "sss lll sld kls asdf jkl sad lad fall ask flask lass",
+          "difficulty": "Beginner",
+          "minimumNetWpm": 20,
+          "minimumAccuracy": 92
+        },
+        {
+          "lessonId": "L1_04",
+          "orderIndex": 4,
+          "title": "1.4 A, G, H & ;",
+          "description": "Extend outer pinky and center index home-row keys.",
+          "targetCharacters": "agh;",
+          "practiceText": "aaa ;;; ggg hhh glad half dash flash hall ash shall ask;",
+          "difficulty": "Beginner",
+          "minimumNetWpm": 22,
+          "minimumAccuracy": 92
+        }
+      ]
+    },
+    {
+      "levelId": 2,
+      "title": "Level 2 — Top Row",
+      "description": "Reach upward cleanly from the home row and return to F and J anchors.",
+      "ergonomicTip": "Move individual fingers upward while keeping the other fingertips hovering over home row.",
+      "lessons": [
+        {
+          "lessonId": "L2_01",
+          "orderIndex": 1,
+          "title": "2.1 E & I Upward",
+          "description": "Middle-finger reaches to E and I.",
+          "targetCharacters": "ei",
+          "practiceText": "ded kik feel like kid slide life desk side idle file",
+          "difficulty": "Beginner",
+          "minimumNetWpm": 24,
+          "minimumAccuracy": 92
+        },
+        {
+          "lessonId": "L2_02",
+          "orderIndex": 2,
+          "title": "2.2 R, T, U & Y",
+          "description": "Index-finger reaches across the upper center.",
+          "targetCharacters": "rtuy",
+          "practiceText": "frf juj run fur rule true user sure fire lure try duty",
+          "difficulty": "Intermediate",
+          "minimumNetWpm": 26,
+          "minimumAccuracy": 93
+        },
+        {
+          "lessonId": "L2_03",
+          "orderIndex": 3,
+          "title": "2.3 Q, W, O & P",
+          "description": "Outer top-row reaches with ring and pinky fingers.",
+          "targetCharacters": "qwop",
+          "practiceText": "work word slow power quote equip follow people quiet wood",
+          "difficulty": "Intermediate",
+          "minimumNetWpm": 28,
+          "minimumAccuracy": 93
+        }
+      ]
+    },
+    {
+      "levelId": 3,
+      "title": "Level 3 — Bottom Row",
+      "description": "Execute downward reaches while maintaining steady wrist posture.",
+      "ergonomicTip": "Curl fingers softly toward the bottom row rather than sliding your palms backward.",
+      "lessons": [
+        {
+          "lessonId": "L3_01",
+          "orderIndex": 1,
+          "title": "3.1 C, V, N & M",
+          "description": "Center bottom-row reaches and common bigrams.",
+          "targetCharacters": "cvnm",
+          "practiceText": "calm mind move fine line come name near live even main",
+          "difficulty": "Intermediate",
+          "minimumNetWpm": 30,
+          "minimumAccuracy": 94
+        },
+        {
+          "lessonId": "L3_02",
+          "orderIndex": 2,
+          "title": "3.2 Z, X, B & Punctuation",
+          "description": "Complete the alphabet with Z, X, B, comma, period, and slash.",
+          "targetCharacters": "zxb,./",
+          "practiceText": "zero exact box, brave climb, next zone. fixed size, bold.",
+          "difficulty": "Intermediate",
+          "minimumNetWpm": 32,
+          "minimumAccuracy": 94
+        }
+      ]
+    },
+    {
+      "levelId": 4,
+      "title": "Level 4 — Number Row",
+      "description": "Build confidence reaching to digits 0 through 9 without glancing down.",
+      "ergonomicTip": "Anchor your opposite hand lightly while reaching high to the number row.",
+      "lessons": [
+        {
+          "lessonId": "L4_01",
+          "orderIndex": 1,
+          "title": "4.1 Digits 1 to 5",
+          "description": "Left-hand number reaches paired with common words.",
+          "targetCharacters": "12345",
+          "practiceText": "10 24 35 42 51 order 14 files and 23 items in 5 rooms",
+          "difficulty": "Intermediate",
+          "minimumNetWpm": 28,
+          "minimumAccuracy": 93
+        },
+        {
+          "lessonId": "L4_02",
+          "orderIndex": 2,
+          "title": "4.2 Digits 6 to 0",
+          "description": "Right-hand number reaches in realistic quantities.",
+          "targetCharacters": "67890",
+          "practiceText": "60 78 89 90 1986 port 8080 build 7406 code 9020 line 67",
+          "difficulty": "Intermediate",
+          "minimumNetWpm": 28,
+          "minimumAccuracy": 93
+        }
+      ]
+    },
+    {
+      "levelId": 5,
+      "title": "Level 5 — Punctuation",
+      "description": "Master brackets, quotes, hyphens, and punctuation rhythm.",
+      "ergonomicTip": "Keep pinky reaches smooth and avoid twisting your right wrist toward Enter.",
+      "lessons": [
+        {
+          "lessonId": "L5_01",
+          "orderIndex": 1,
+          "title": "5.1 Quotes, Colons & Hyphens",
+          "description": "Accurate sentence and technical punctuation.",
+          "targetCharacters": ":'\"-?!",
+          "practiceText": "note: use 'clean-flow' speed; ask why? stay calm! done.",
+          "difficulty": "Advanced",
+          "minimumNetWpm": 32,
+          "minimumAccuracy": 94
+        },
+        {
+          "lessonId": "L5_02",
+          "orderIndex": 2,
+          "title": "5.2 Symbols & Parentheses",
+          "description": "Code and prose symbol sequences.",
+          "targetCharacters": "()[]{}/=",
+          "practiceText": "run(task) = [1, 2]; map(key) -> {ok}; check(0) == true;",
+          "difficulty": "Advanced",
+          "minimumNetWpm": 30,
+          "minimumAccuracy": 94
+        }
+      ]
+    },
+    {
+      "levelId": 6,
+      "title": "Level 6 — Capital Letters",
+      "description": "Practice smooth opposite-hand Shift coordination for uppercase text.",
+      "ergonomicTip": "Always hold Shift with the opposite hand from the letter being capitalized.",
+      "lessons": [
+        {
+          "lessonId": "L6_01",
+          "orderIndex": 1,
+          "title": "6.1 Left & Right Shift Sync",
+          "description": "Proper nouns and clean sentence capitalization.",
+          "targetCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+          "practiceText": "Alice and David met Mark in Seattle. TypeForge runs fast.",
+          "difficulty": "Advanced",
+          "minimumNetWpm": 35,
+          "minimumAccuracy": 95
+        }
+      ]
+    },
+    {
+      "levelId": 7,
+      "title": "Level 7 — Combined Practice",
+      "description": "Sustained multi-skill fluency combining letters, numbers, capitals, and punctuation.",
+      "ergonomicTip": "Prioritize even cadence over bursts; steady rhythm naturally compounds speed.",
+      "lessons": [
+        {
+          "lessonId": "L7_01",
+          "orderIndex": 1,
+          "title": "7.1 Full Keyboard Fluency",
+          "description": "Mixed prose and technical phrasing for capstone mastery.",
+          "targetCharacters": "All",
+          "practiceText": "Build #42 passed in 18s: TypeForge measured 74 WPM at 98.5% precision.",
+          "difficulty": "Mastery",
+          "minimumNetWpm": 40,
+          "minimumAccuracy": 95
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,15 @@
 node_modules/
 .next/
 dist/
+bin/
+obj/
+TestResults/
+.vs/
+*.user
+*.suo
+*.db
+*.db-shm
+*.db-wal
 .env
 .env.local
 *.key

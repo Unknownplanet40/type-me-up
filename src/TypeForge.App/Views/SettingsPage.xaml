@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="TypeForge.App.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    HorizontalAlignment="Stretch"
+    mc:Ignorable="d">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalAlignment="Stretch">
+        <Grid Padding="40,16,40,36" RowSpacing="20" HorizontalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Spacing="4">
+                <TextBlock Text="Settings" FontSize="26" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                <TextBlock Text="Configure theme, font sizing, keyboard visualization, daily goals, and typing behavior." FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+            </StackPanel>
+
+            <Border Grid.Row="1" Style="{StaticResource ForgeCardStyle}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Appearance &amp; Keyboard" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Application Theme" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Dark (#0D0D0D Acrylic) default, Light, or Windows system setting." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" Width="190" SelectedIndex="{x:Bind ViewModel.ThemeIndex, Mode=TwoWay}" AutomationProperties.Name="Application theme" VerticalAlignment="Center">
+                            <ComboBoxItem Content="Light" />
+                            <ComboBoxItem Content="Dark" />
+                            <ComboBoxItem Content="Windows Default" />
+                        </ComboBox>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Typing Text Font Size" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Adjust monospace stream size in Practice view (16px - 48px)." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <Slider Width="180" Minimum="16" Maximum="48" StepFrequency="2" Value="{x:Bind ViewModel.TypingFontSize, Mode=TwoWay}" />
+                            <TextBlock Text="{x:Bind ViewModel.TypingFontSize, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" VerticalAlignment="Center" Width="28" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Virtual Keyboard Color Mode" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Performance heat (green/yellow/red) or ergonomic finger-zone guide." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" Width="210" SelectedIndex="{x:Bind ViewModel.KeyboardColorModeIndex, Mode=TwoWay}" VerticalAlignment="Center">
+                            <ComboBoxItem Content="Performance Heat (Default)" />
+                            <ComboBoxItem Content="Finger-Zone Guide" />
+                        </ComboBox>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Show Virtual Keyboard" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Display on-screen QWERTY keyboard during typing sessions." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.ShowVirtualKeyboard, Mode=TwoWay}" OnContent="Visible" OffContent="Hidden" VerticalAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="2" Style="{StaticResource ForgeCardStyle}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Daily Goal &amp; Typing Mechanics" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Daily Practice Goal" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Target active typing duration tracked on the Practice HUD." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" Width="190" SelectedIndex="{x:Bind ViewModel.DailyGoalIndex, Mode=TwoWay}" VerticalAlignment="Center">
+                            <ComboBoxItem Content="10 minutes / day" />
+                            <ComboBoxItem Content="15 minutes / day" />
+                            <ComboBoxItem Content="30 minutes / day" />
+                            <ComboBoxItem Content="45 minutes / day" />
+                            <ComboBoxItem Content="60 minutes / day" />
+                        </ComboBox>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Audio Keystroke Feedback" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Play subtle switch click on valid stroke and soft tap on mistake." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.SoundEnabled, Mode=TwoWay}" OnContent="Enabled" OffContent="Muted" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Stop on Error (Strict Mode)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Halt cursor on mistakes until the correct character is typed." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.StopOnError, Mode=TwoWay}" OnContent="Strict" OffContent="Free-Flow" AutomationProperties.Name="Stop on error mode" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Optimal Course Duration" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Shorten repetitive course drills automatically after 96%+ mastery on earlier steps." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.OptimalDurationEnabled, Mode=TwoWay}" OnContent="Adaptive" OffContent="Full" AutomationProperties.Name="Optimal course duration" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Adaptive Drill Word Mode" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Choose phonetic Keybr-style pseudo-words or natural English dictionary words." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" Width="210" SelectedIndex="{x:Bind ViewModel.AdaptiveWordModeIndex, Mode=TwoWay}" AutomationProperties.Name="Adaptive word mode" VerticalAlignment="Center">
+                            <ComboBoxItem Content="Phonetic Pseudo-Words" />
+                            <ComboBoxItem Content="English Dictionary" />
+                        </ComboBox>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Adaptive Unlock Difficulty" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Speed &amp; accuracy thresholds required before unlocking new letters." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" Width="210" SelectedIndex="{x:Bind ViewModel.AdaptiveProfileIndex, Mode=TwoWay}" AutomationProperties.Name="Adaptive difficulty profile" VerticalAlignment="Center">
+                            <ComboBoxItem Content="Casual (650ms · 90%)" />
+                            <ComboBoxItem Content="Standard (500ms · 95%)" />
+                            <ComboBoxItem Content="Pro (350ms · 98%)" />
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="3" Style="{StaticResource ForgeCardStyle}">
+                <Grid>
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Offline Privacy" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                        <TextBlock Text="100% offline desktop application. Zero telemetry, zero network requests." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    </StackPanel>
+                    <TextBlock Text="TypeForge v0.2.0" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</Page>
