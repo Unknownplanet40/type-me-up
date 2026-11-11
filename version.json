@@ -1,6 +1,5 @@
 {
-  "name": "starter-project",
-  "version": "0.0.0",
-  "channel": "stable",
-  "download_url": ""
+  "name": "-type-me-up",
+  "version": "0.1.0",
+  "channel": "stable"
 }
