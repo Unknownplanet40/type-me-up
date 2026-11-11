@@ -1,0 +1,6 @@
+# Project Memory
+<!-- Append-only. Never edit history. -->
+
+## YYYY-MM-DD Title
+- [Decision] ...
+- [Rejected] ...

@@ -1,0 +1,20 @@
+node_modules/
+.next/
+dist/
+.env
+.env.local
+*.key
+*.pem
+secrets.json
+.commit_msg.txt
+.DS_Store
+
+# AI & Agent Tooling (ignored in new projects)
+AGENTS.md
+.agents/
+.gemini/
+.claude/
+.cursor/
+handoff.md
+guides/
+docs/presets/
