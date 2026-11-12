@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-11-12
+
+### Changed
+- point version.json at release v0.5.2 [skip ci] (63e688d)
+
+### Fixed
+- copy all PNG assets to publish output for installer (791be70)
+
 ## [0.5.2] - 2026-11-12
 
 ### Changed
