@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
+using TypeForge.Core.Models;
 
 namespace TypeForge.App.Services;
 
@@ -8,6 +9,8 @@ namespace TypeForge.App.Services;
 /// </summary>
 public interface IKeystrokeAudioService : IDisposable
 {
+    void Configure(SoundFeedbackMode mode, SoundTheme theme, int volumePercent);
+    void Preview(SoundTheme theme, int volumePercent);
     void PlayClick();
     void PlayMistake();
 }
@@ -22,24 +25,126 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
     private const uint SndNoDefault = 0x0002;
     private const uint Flags = SndMemory | SndAsync | SndNoDefault;
 
-    private readonly byte[] _clickWav;
-    private readonly byte[] _mistakeWav;
+    private readonly object _lock = new();
+    private byte[] _clickWav = [];
+    private byte[] _mistakeWav = [];
     private GCHandle _clickHandle;
     private GCHandle _mistakeHandle;
+    private SoundFeedbackMode _mode = SoundFeedbackMode.All;
+    private SoundTheme _theme = SoundTheme.Default;
+    private int _volumePercent = 80;
     private bool _disposed;
 
     public KeystrokeAudioService()
     {
-        _clickWav = BuildPcmWav(sampleRate: 22050, durationMs: 18, baseFrequencyHz: 1150, sweepEndHz: 420, amplitude: 0.24, isClick: true);
-        _mistakeWav = BuildPcmWav(sampleRate: 22050, durationMs: 55, baseFrequencyHz: 210, sweepEndHz: 150, amplitude: 0.30, isClick: false);
+        RebuildBuffers(_theme, _volumePercent);
+    }
 
+    public void Configure(SoundFeedbackMode mode, SoundTheme theme, int volumePercent)
+    {
+        int clampedVolume = Math.Clamp(volumePercent, 0, 100);
+        lock (_lock)
+        {
+            _mode = mode;
+            if (_theme != theme || _volumePercent != clampedVolume)
+            {
+                _theme = theme;
+                _volumePercent = clampedVolume;
+                RebuildBuffers(theme, clampedVolume);
+            }
+        }
+    }
+
+    public void Preview(SoundTheme theme, int volumePercent)
+    {
+        int clampedVolume = Math.Clamp(volumePercent, 0, 100);
+        byte[] previewWav = BuildClickForTheme(theme, clampedVolume);
+        GCHandle handle = GCHandle.Alloc(previewWav, GCHandleType.Pinned);
+        try
+        {
+            _ = NativeMethods.PlaySoundW(handle.AddrOfPinnedObject(), IntPtr.Zero, Flags & ~SndAsync);
+        }
+        catch
+        {
+            // Ignore audio device absence on headless runners.
+        }
+        finally
+        {
+            if (handle.IsAllocated)
+            {
+                handle.Free();
+            }
+        }
+    }
+
+    public void PlayClick()
+    {
+        if (_mode is not (SoundFeedbackMode.KeysOnly or SoundFeedbackMode.All) || _volumePercent <= 0)
+        {
+            return;
+        }
+
+        PlayPinnedBuffer(_clickHandle);
+    }
+
+    public void PlayMistake()
+    {
+        if (_mode is not (SoundFeedbackMode.ErrorsOnly or SoundFeedbackMode.All) || _volumePercent <= 0)
+        {
+            return;
+        }
+
+        PlayPinnedBuffer(_mistakeHandle);
+    }
+
+    private void RebuildBuffers(SoundTheme theme, int volumePercent)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        FreeHandles();
+        _clickWav = BuildClickForTheme(theme, volumePercent);
+        _mistakeWav = BuildMistakeForTheme(theme, volumePercent);
         _clickHandle = GCHandle.Alloc(_clickWav, GCHandleType.Pinned);
         _mistakeHandle = GCHandle.Alloc(_mistakeWav, GCHandleType.Pinned);
     }
 
-    public void PlayClick() => PlayPinnedBuffer(_clickHandle);
+    private static byte[] BuildClickForTheme(SoundTheme theme, int volumePercent)
+    {
+        double scale = Math.Clamp(volumePercent / 100.0, 0.0, 1.0);
+        return theme switch
+        {
+            SoundTheme.Mechanical => BuildPcmWav(22050, 22, 820, 240, 0.34 * scale, isClick: true),
+            SoundTheme.Typewriter => BuildPcmWav(22050, 26, 1650, 580, 0.36 * scale, isClick: true),
+            SoundTheme.Soft => BuildPcmWav(22050, 16, 680, 320, 0.16 * scale, isClick: true),
+            _ => BuildPcmWav(22050, 18, 1150, 420, 0.28 * scale, isClick: true)
+        };
+    }
 
-    public void PlayMistake() => PlayPinnedBuffer(_mistakeHandle);
+    private static byte[] BuildMistakeForTheme(SoundTheme theme, int volumePercent)
+    {
+        double scale = Math.Clamp(volumePercent / 100.0, 0.0, 1.0);
+        return theme switch
+        {
+            SoundTheme.Soft => BuildPcmWav(22050, 45, 190, 145, 0.22 * scale, isClick: false),
+            _ => BuildPcmWav(22050, 55, 210, 150, 0.32 * scale, isClick: false)
+        };
+    }
+
+    private void FreeHandles()
+    {
+        if (_clickHandle.IsAllocated)
+        {
+            _clickHandle.Free();
+        }
+
+        if (_mistakeHandle.IsAllocated)
+        {
+            _mistakeHandle.Free();
+        }
+    }
 
     private void PlayPinnedBuffer(GCHandle handle)
     {
@@ -75,15 +180,7 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
             // Ignore shutdown audio errors.
         }
 
-        if (_clickHandle.IsAllocated)
-        {
-            _clickHandle.Free();
-        }
-
-        if (_mistakeHandle.IsAllocated)
-        {
-            _mistakeHandle.Free();
-        }
+        FreeHandles();
     }
 
     private static byte[] BuildPcmWav(

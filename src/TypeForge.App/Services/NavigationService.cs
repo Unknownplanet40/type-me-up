@@ -28,7 +28,7 @@ public sealed class NavigationService : INavigationService
     private readonly Dictionary<string, Type> _routes = new(StringComparer.OrdinalIgnoreCase);
     private Frame? _frame;
 
-    public string CurrentRoute { get; private set; } = "practice";
+    public string CurrentRoute { get; private set; } = "course";
     public bool IsFocusMode { get; private set; }
 
     public event Action<string>? RouteChanged;

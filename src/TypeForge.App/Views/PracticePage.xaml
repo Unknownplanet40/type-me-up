@@ -11,7 +11,6 @@
     VerticalAlignment="Stretch"
     PointerEntered="Root_PointerEntered"
     PointerExited="Root_PointerExited"
-    PointerPressed="Root_PointerPressed"
     CharacterReceived="Page_CharacterReceived"
     PreviewKeyDown="Page_PreviewKeyDown"
     mc:Ignorable="d">
@@ -55,35 +54,33 @@
                     Spacing="4"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Center"
-                    Opacity="0">
+                    Opacity="0.6">
                     <StackPanel.OpacityTransition>
                         <ScalarTransition Duration="0:0:0.18" />
                     </StackPanel.OpacityTransition>
-                    <Button Click="BtnMute_Click" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Mute keystroke sound">
+                    <Button Click="BtnMute_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Mute keystroke sound">
                         <FontIcon x:Name="IconMute" Glyph="&#xE767;" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     </Button>
-                    <Button Click="BtnRestart_Click" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Restart prompt (Tab)">
+                    <Button Click="BtnRestart_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Restart prompt (Tab)">
                         <FontIcon Glyph="&#xE72C;" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     </Button>
-                    <Button Click="BtnFocus_Click" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Zen / Fullscreen mode (Esc)">
+                    <Button Click="BtnSettings_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Text appearance &amp; typing settings" AutomationProperties.Name="Practice settings">
+                        <FontIcon Glyph="&#xE713;" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    </Button>
+                    <Button Click="BtnFocus_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="6" CornerRadius="6" ToolTipService.ToolTip="Zen / Fullscreen mode (Esc)">
                         <FontIcon Glyph="&#xE740;" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     </Button>
                 </StackPanel>
             </Grid>
 
-            <!-- 3. Large Centered Live Typing Stream -->
-            <Grid Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="24,16" MaxWidth="920">
-                <RichTextBlock
-                    x:Name="TypingStreamBlock"
-                    FontFamily="Cascadia Mono, Consolas"
-                    FontSize="{x:Bind ViewModel.TypingFontSize, Mode=OneWay}"
-                    LineHeight="50"
-                    CharacterSpacing="28"
-                    TextAlignment="Center"
-                    IsTextSelectionEnabled="False">
-                    <Paragraph x:Name="StreamParagraph" />
-                </RichTextBlock>
-            </Grid>
+            <!-- 3. Static Start-Aligned Live Typing Stream with Moving Cursor Indicator -->
+            <controls:TypingStreamView
+                x:Name="StreamView"
+                Grid.Row="2"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Stretch"
+                MaxWidth="920"
+                Padding="24,16" />
 
             <!-- 4. Live Virtual QWERTY Keyboard -->
             <controls:VirtualKeyboardControl
@@ -104,7 +101,7 @@
                 BorderThickness="1"
                 CornerRadius="14"
                 Padding="28"
-                Width="460"
+                Width="520"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
                 <StackPanel Spacing="18">
@@ -149,15 +146,63 @@
 
                     <Grid ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="Review Weak Keys" Style="{StaticResource ForgePrimaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnReviewWeakKeys_Click" />
+                        <Button Grid.Column="0" Content="Review Weak Keys" Padding="16,8" Style="{StaticResource ForgePrimaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnReviewWeakKeys_Click" />
                         <Button Grid.Column="1" Content="Next Drill" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnNextDrill_Click" />
                         <Button Grid.Column="2" Content="Repeat" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnRepeat_Click" />
                     </Grid>
                 </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Practice Typing & Text Appearance Settings Dialog -->
+        <Grid
+            x:Name="PracticeSettingsOverlay"
+            Visibility="{x:Bind ViewModel.IsSettingsDialogOpen, Mode=OneWay}"
+            Background="#BC000000">
+            <Border
+                Background="{ThemeResource ForgeCardBrush}"
+                BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="24,18"
+                Width="780"
+                MaxHeight="670"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <Grid RowSpacing="14">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,10">
+                        <TextBlock Text="Practice Settings" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" VerticalAlignment="Center" />
+                        <TextBlock Text="Typing Settings: Customize behavior, appearance, and sound" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+                        <controls:TypingSettingsControl x:Name="PracticeSettingsControl" />
+                    </ScrollViewer>
+
+                    <Grid Grid.Row="2" Padding="0,4,0,0">
+                        <Button
+                            Click="BtnDoneSettings_Click"
+                            Style="{StaticResource ForgePrimaryButtonStyle}"
+                            HorizontalAlignment="Right"
+                            Padding="18,8"
+                            AutomationProperties.Name="DONE">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE73E;" FontSize="14" />
+                                <TextBlock Text="DONE" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Grid>
             </Border>
         </Grid>
     </Grid>

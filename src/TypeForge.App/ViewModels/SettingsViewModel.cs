@@ -186,6 +186,11 @@ public sealed partial class SettingsViewModel : ObservableObject
             if (_state.Settings.SoundEnabled != value)
             {
                 _state.Settings.SoundEnabled = value;
+                if (value && _state.Settings.SoundMode == SoundFeedbackMode.None)
+                {
+                    _state.Settings.SoundMode = SoundFeedbackMode.All;
+                }
+
                 _state.SaveSettings();
                 OnPropertyChanged();
             }

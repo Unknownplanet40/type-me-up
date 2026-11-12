@@ -1,8 +1,6 @@
-using System.Text;
 using Microsoft.UI.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Documents;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
@@ -34,12 +32,53 @@ public sealed partial class PracticePage : Page
 
         Loaded += PracticePage_Loaded;
         Unloaded += PracticePage_Unloaded;
+        AddHandler(PointerPressedEvent, new PointerEventHandler(Root_PointerPressed), handledEventsToo: true);
     }
 
     protected override void OnNavigatedTo(NavigationEventArgs e)
     {
         base.OnNavigatedTo(e);
         ViewModel.LoadPendingSession();
+    }
+
+    public void FocusTypingSurface()
+    {
+        if (!ViewModel.IsSettingsDialogOpen && !ViewModel.IsResultsVisible)
+        {
+            Focus(FocusState.Programmatic);
+        }
+    }
+
+    public bool HandleCharacterInput(char ch)
+    {
+        if (ViewModel.IsSettingsDialogOpen || ViewModel.IsResultsVisible || char.IsControl(ch))
+        {
+            return false;
+        }
+
+        return ViewModel.HandleCharacter(ch);
+    }
+
+    public bool HandleKeyDownInput(VirtualKey key)
+    {
+        if (ViewModel.IsSettingsDialogOpen)
+        {
+            return false;
+        }
+
+        switch (key)
+        {
+            case VirtualKey.Back:
+                return !ViewModel.IsResultsVisible && ViewModel.HandleBackspace();
+            case VirtualKey.Tab:
+                ViewModel.RestartSession();
+                return true;
+            case VirtualKey.Escape:
+                ViewModel.ToggleFocusMode();
+                return true;
+            default:
+                return false;
+        }
     }
 
     private void PracticePage_Loaded(object sender, RoutedEventArgs e)
@@ -54,12 +93,14 @@ public sealed partial class PracticePage : Page
         }
 
         _hudTimer.Start();
-        Focus(FocusState.Programmatic);
+        FocusTypingSurface();
+        DispatcherQueue.TryEnqueue(FocusTypingSurface);
     }
 
     private void PracticePage_Unloaded(object sender, RoutedEventArgs e)
     {
         _hudTimer.Stop();
+        PracticeSettingsControl.StopPreview();
         ViewModel.SnapshotUpdated -= OnSnapshotUpdated;
     }
 
@@ -115,84 +156,15 @@ public sealed partial class PracticePage : Page
         }
 
         DailyGoalFill.Width = 96.0 * ViewModel.DailyGoalProgress;
-        RenderStream(snapshot, dict);
+        StreamView.UpdateAppearance(
+            ViewModel.TypingFontSelection,
+            ViewModel.TypingFontSize,
+            ViewModel.WhitespaceDisplay,
+            ViewModel.CursorShape,
+            ViewModel.CursorMovement);
+        StreamView.RenderSnapshot(snapshot);
         RenderKeyPills(dict);
         VirtualKeyboard.UpdateState(ViewModel.ActiveTargetKey, ViewModel.KeyMetrics, ViewModel.KeyboardColorMode);
-    }
-
-    private void RenderStream(TypingSnapshot snapshot, ResourceDictionary dict)
-    {
-        StreamParagraph.Inlines.Clear();
-
-        var greenBrush = (Brush)dict["ForgeGreenBrush"];
-        var redBrush = (Brush)dict["ForgeRedBrush"];
-        var purpleBrush = (Brush)dict["ForgePurpleBrush"];
-        var purpleSoftBrush = (Brush)dict["ForgePurpleSoftBrush"];
-        var pendingBrush = (Brush)dict["ForgeTextSecondaryBrush"];
-        var mutedDotBrush = (Brush)dict["ForgeTextMutedBrush"];
-
-        string text = snapshot.TargetText;
-        IReadOnlyList<TypingCharacterState> states = snapshot.CharacterStates;
-
-        int i = 0;
-        while (i < text.Length)
-        {
-            TypingCharacterState state = states[i];
-
-            if (state == TypingCharacterState.Current)
-            {
-                string displayChar = text[i] == ' ' ? "·" : text[i].ToString();
-                var activeBlock = new TextBlock
-                {
-                    Text = displayChar,
-                    FontFamily = new FontFamily("Cascadia Mono, Consolas"),
-                    FontSize = ViewModel.TypingFontSize,
-                    FontWeight = FontWeights.SemiBold,
-                    Foreground = purpleBrush
-                };
-
-                var cursorBorder = new Border
-                {
-                    Background = purpleSoftBrush,
-                    BorderBrush = purpleBrush,
-                    BorderThickness = new Thickness(0, 0, 0, 2.5),
-                    CornerRadius = new CornerRadius(5),
-                    Padding = new Thickness(3, 0, 3, 1),
-                    Margin = new Thickness(0, 0, 1, -5),
-                    Child = activeBlock
-                };
-
-                StreamParagraph.Inlines.Add(new InlineUIContainer { Child = cursorBorder });
-                i++;
-                continue;
-            }
-
-            var chunk = new StringBuilder();
-            while (i < text.Length && states[i] == state)
-            {
-                chunk.Append(text[i] == ' ' ? '·' : text[i]);
-                i++;
-            }
-
-            Brush runBrush = state switch
-            {
-                TypingCharacterState.Correct => greenBrush,
-                TypingCharacterState.Incorrect => redBrush,
-                _ => pendingBrush
-            };
-
-            // Slightly dim middle dots cleanly when pending
-            if (state == TypingCharacterState.Pending && chunk.ToString() == "·")
-            {
-                runBrush = mutedDotBrush;
-            }
-
-            StreamParagraph.Inlines.Add(new Run
-            {
-                Text = chunk.ToString(),
-                Foreground = runBrush
-            });
-        }
     }
 
     private void RenderKeyPills(ResourceDictionary dict)
@@ -304,12 +276,7 @@ public sealed partial class PracticePage : Page
     private void Page_CharacterReceived(UIElement sender, CharacterReceivedRoutedEventArgs args)
     {
         char ch = Convert.ToChar(args.Character);
-        if (char.IsControl(ch))
-        {
-            return;
-        }
-
-        if (ViewModel.HandleCharacter(ch))
+        if (HandleCharacterInput(ch))
         {
             args.Handled = true;
         }
@@ -317,32 +284,36 @@ public sealed partial class PracticePage : Page
 
     private void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
-        switch (e.Key)
+        if (HandleKeyDownInput(e.Key))
         {
-            case VirtualKey.Back:
-                if (ViewModel.HandleBackspace())
-                {
-                    e.Handled = true;
-                }
-                break;
-
-            case VirtualKey.Tab:
-                ViewModel.RestartSession();
-                e.Handled = true;
-                break;
-
-            case VirtualKey.Escape:
-                ViewModel.ToggleFocusMode();
-                e.Handled = true;
-                break;
+            e.Handled = true;
         }
     }
 
-    private void Root_PointerEntered(object sender, PointerRoutedEventArgs e) => HoverControls.Opacity = 0.9;
+    private void Root_PointerEntered(object sender, PointerRoutedEventArgs e) => HoverControls.Opacity = 1.0;
 
-    private void Root_PointerExited(object sender, PointerRoutedEventArgs e) => HoverControls.Opacity = 0;
+    private void Root_PointerExited(object sender, PointerRoutedEventArgs e) => HoverControls.Opacity = 0.6;
 
-    private void Root_PointerPressed(object sender, PointerRoutedEventArgs e) => Focus(FocusState.Programmatic);
+    private void Root_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        FocusTypingSurface();
+    }
+
+    private void BtnSettings_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.OpenSettingsDialog();
+        PracticeSettingsControl.LoadFromSettings(ViewModel.CurrentSettings);
+        PracticeSettingsControl.StartPreview();
+    }
+
+    private void BtnDoneSettings_Click(object sender, RoutedEventArgs e)
+    {
+        PracticeSettingsControl.StopPreview();
+        PracticeSettingsControl.ApplyToSettings(ViewModel.CurrentSettings);
+        ViewModel.ApplySettingsAndClose();
+        IconMute.Glyph = ViewModel.IsMuted ? "\uE74F" : "\uE767";
+        Focus(FocusState.Programmatic);
+    }
 
     private void BtnMute_Click(object sender, RoutedEventArgs e)
     {

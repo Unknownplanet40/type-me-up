@@ -22,6 +22,7 @@ public static class EmbeddedContentLoader
     private const string CoursesResourceName = "TypeForge.Core.Resources.courses.json";
     private const string PassagesResourceName = "TypeForge.Core.Resources.timed_passages.json";
     private const string DictionaryResourceName = "TypeForge.Core.Resources.english_words.json";
+    private const string BooksResourceName = "TypeForge.Core.Resources.books.json";
 
     private static readonly string[] FallbackDictionaryWords =
     [
@@ -226,6 +227,107 @@ public static class EmbeddedContentLoader
     {
         string json = ReadEmbeddedText(DictionaryResourceName);
         return ParseDictionaryWordsSafe(json);
+    }
+
+    /// <summary>
+    /// Loads embedded public-domain books for Book Paragraphs typing tests.
+    /// </summary>
+    public static IReadOnlyList<BookModel> LoadBooks()
+    {
+        string json = ReadEmbeddedText(BooksResourceName);
+        return ParseBooks(json);
+    }
+
+    /// <summary>
+    /// Loads embedded books with safe fallback protection if JSON is malformed.
+    /// </summary>
+    public static IReadOnlyList<BookModel> LoadBooksSafe()
+    {
+        try
+        {
+            return LoadBooks();
+        }
+        catch (Exception ex) when (ex is InvalidDataException or FileNotFoundException or JsonException or ArgumentException)
+        {
+            return
+            [
+                new BookModel(
+                    id: "alice_wonderland",
+                    title: "Alice's Adventures in Wonderland",
+                    author: "Lewis Carroll",
+                    chapters: 1,
+                    allWords: 45,
+                    uniqueWords: 38,
+                    characters: 240,
+                    averageWordLength: 4.1,
+                    paragraphs:
+                    [
+                        "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do."
+                    ])
+            ];
+        }
+    }
+
+    /// <summary>
+    /// Parses and validates embedded books JSON.
+    /// </summary>
+    public static IReadOnlyList<BookModel> ParseBooks(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            throw new InvalidDataException("Books JSON cannot be empty.");
+        }
+
+        BooksDocument? doc;
+        try
+        {
+            doc = JsonSerializer.Deserialize(json, EmbeddedContentJsonContext.Default.BooksDocument);
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidDataException("Malformed books JSON.", ex);
+        }
+
+        if (doc?.Books is null || doc.Books.Count == 0)
+        {
+            throw new InvalidDataException("Books document must contain at least one book.");
+        }
+
+        var books = new List<BookModel>(doc.Books.Count);
+        foreach (BookDto dto in doc.Books)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Id) ||
+                string.IsNullOrWhiteSpace(dto.Title) ||
+                string.IsNullOrWhiteSpace(dto.Author) ||
+                dto.Paragraphs is null ||
+                dto.Paragraphs.Count == 0)
+            {
+                throw new InvalidDataException($"Book '{dto.Id}' is missing required fields or paragraphs.");
+            }
+
+            List<string> paragraphs = dto.Paragraphs
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Select(p => p.Trim())
+                .ToList();
+
+            if (paragraphs.Count == 0)
+            {
+                throw new InvalidDataException($"Book '{dto.Id}' must contain at least one non-empty paragraph.");
+            }
+
+            books.Add(new BookModel(
+                id: dto.Id.Trim(),
+                title: dto.Title.Trim(),
+                author: dto.Author.Trim(),
+                chapters: Math.Max(1, dto.Chapters),
+                allWords: Math.Max(1, dto.AllWords),
+                uniqueWords: Math.Max(1, dto.UniqueWords),
+                characters: Math.Max(1, dto.Characters),
+                averageWordLength: Math.Round(dto.AverageWordLength, 2),
+                paragraphs: paragraphs));
+        }
+
+        return books;
     }
 
     /// <summary>
@@ -602,6 +704,42 @@ public static class EmbeddedContentLoader
         [JsonPropertyName("minimumAccuracy")]
         public double MinimumAccuracy { get; set; }
     }
+
+    internal sealed class BooksDocument
+    {
+        [JsonPropertyName("books")]
+        public List<BookDto>? Books { get; set; }
+    }
+
+    internal sealed class BookDto
+    {
+        [JsonPropertyName("id")]
+        public string? Id { get; set; }
+
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+
+        [JsonPropertyName("author")]
+        public string? Author { get; set; }
+
+        [JsonPropertyName("chapters")]
+        public int Chapters { get; set; }
+
+        [JsonPropertyName("allWords")]
+        public int AllWords { get; set; }
+
+        [JsonPropertyName("uniqueWords")]
+        public int UniqueWords { get; set; }
+
+        [JsonPropertyName("characters")]
+        public int Characters { get; set; }
+
+        [JsonPropertyName("averageWordLength")]
+        public double AverageWordLength { get; set; }
+
+        [JsonPropertyName("paragraphs")]
+        public List<string>? Paragraphs { get; set; }
+    }
 }
 
 [JsonSourceGenerationOptions(
@@ -612,6 +750,7 @@ public static class EmbeddedContentLoader
 [JsonSerializable(typeof(EmbeddedContentLoader.PassagesDocument))]
 [JsonSerializable(typeof(EmbeddedContentLoader.CoursesDocument))]
 [JsonSerializable(typeof(EmbeddedContentLoader.WordsDocument))]
+[JsonSerializable(typeof(EmbeddedContentLoader.BooksDocument))]
 internal sealed partial class EmbeddedContentJsonContext : JsonSerializerContext
 {
 }

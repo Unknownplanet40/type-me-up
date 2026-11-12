@@ -11,7 +11,12 @@
         <DesktopAcrylicBackdrop />
     </Window.SystemBackdrop>
 
-    <Grid x:Name="RootGrid" RequestedTheme="Dark" Background="{ThemeResource ForgeCanvasBrush}">
+    <Grid
+        x:Name="RootGrid"
+        RequestedTheme="Dark"
+        Background="{ThemeResource ForgeCanvasBrush}"
+        CharacterReceived="RootGrid_CharacterReceived"
+        KeyDown="RootGrid_KeyDown">
         <Grid.RowDefinitions>
             <RowDefinition x:Name="TopBarRow" Height="32" />
             <RowDefinition Height="*" />
@@ -36,28 +41,28 @@
                 <Border Width="1" Height="11" Background="{ThemeResource ForgeHairlineBrush}" VerticalAlignment="Center" />
 
                 <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                    <Button x:Name="NavPractice" Tag="practice" Click="NavItem_Click" AutomationProperties.Name="Practice" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
+                    <Button x:Name="NavPractice" Tag="practice" Click="NavItem_Click" AllowFocusOnInteraction="False" AutomationProperties.Name="Practice" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
                         <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock x:Name="LblPractice" Text="Practice" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                            <Border x:Name="DotPractice" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Visible" />
+                            <TextBlock x:Name="LblPractice" Text="Practice" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                            <Border x:Name="DotPractice" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Collapsed" />
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="NavCourse" Tag="course" Click="NavItem_Click" AutomationProperties.Name="Course" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
+                    <Button x:Name="NavCourse" Tag="course" Click="NavItem_Click" AllowFocusOnInteraction="False" AutomationProperties.Name="Course" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
                         <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock x:Name="LblCourse" Text="Course" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
-                            <Border x:Name="DotCourse" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Collapsed" />
+                            <TextBlock x:Name="LblCourse" Text="Course" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <Border x:Name="DotCourse" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Visible" />
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="NavTest" Tag="test" Click="NavItem_Click" AutomationProperties.Name="Test" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
+                    <Button x:Name="NavTest" Tag="test" Click="NavItem_Click" AllowFocusOnInteraction="False" AutomationProperties.Name="Test" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
                         <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock x:Name="LblTest" Text="Test" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                             <Border x:Name="DotTest" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Collapsed" />
                         </StackPanel>
                     </Button>
 
-                    <Button x:Name="NavStatistics" Tag="statistics" Click="NavItem_Click" AutomationProperties.Name="Stats" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
+                    <Button x:Name="NavStatistics" Tag="statistics" Click="NavItem_Click" AllowFocusOnInteraction="False" AutomationProperties.Name="Stats" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
                         <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock x:Name="LblStatistics" Text="Stats" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                             <Border x:Name="DotStatistics" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Collapsed" />
@@ -99,6 +104,7 @@
                     Visibility="Collapsed"
                     Tag="settings"
                     Click="NavItem_Click"
+                    AllowFocusOnInteraction="False"
                     Height="22"
                     Padding="9,0"
                     CornerRadius="11"
@@ -121,6 +127,7 @@
                     x:Name="NavSettings"
                     Tag="settings"
                     Click="NavItem_Click"
+                    AllowFocusOnInteraction="False"
                     Height="26"
                     Width="28"
                     Background="Transparent"

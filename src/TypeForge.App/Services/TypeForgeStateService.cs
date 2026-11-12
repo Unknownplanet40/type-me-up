@@ -17,6 +17,8 @@ public interface ITypeForgeStateService
     CourseTrack? SelectedCourseTrack { get; }
     IReadOnlyList<AdaptiveKeyState> AdaptiveStates { get; }
     IReadOnlyList<TimedPassage> TimedPassages { get; }
+    IReadOnlyList<BookModel> Books { get; }
+    IReadOnlyList<string> DictionaryWords { get; }
     TimeSpan TodayPracticedDuration { get; }
     int StreakDays { get; }
 
@@ -67,6 +69,7 @@ public sealed class TypeForgeStateService : ITypeForgeStateService
     private readonly ITypeForgeRepository _repository;
     private readonly CourseProgressionService _courseProgression;
     private readonly CourseCatalogService _courseCatalog;
+    private readonly IKeystrokeAudioService _audioService;
     private readonly List<SessionResult> _sessions = [];
     private readonly Dictionary<char, KeyAggregate> _keyAggregates = [];
     private readonly Dictionary<string, LessonModel> _lessonLookup = new(StringComparer.OrdinalIgnoreCase);
@@ -76,6 +79,7 @@ public sealed class TypeForgeStateService : ITypeForgeStateService
     private IReadOnlyList<CourseTrack> _courseTracks = [];
     private IReadOnlyList<AdaptiveKeyState> _adaptiveStates = AdaptiveEngine.CreateInitialStates();
     private IReadOnlyList<TimedPassage> _timedPassages = [];
+    private IReadOnlyList<BookModel> _books = [];
     private IReadOnlyList<string> _dictionaryWords = [];
     private bool _initialized;
 
@@ -88,6 +92,8 @@ public sealed class TypeForgeStateService : ITypeForgeStateService
     public CourseTrack? SelectedCourseTrack => _courseCatalog.GetTrack(Settings.SelectedCourseTrackId);
     public IReadOnlyList<AdaptiveKeyState> AdaptiveStates => _adaptiveStates;
     public IReadOnlyList<TimedPassage> TimedPassages => _timedPassages;
+    public IReadOnlyList<BookModel> Books => _books;
+    public IReadOnlyList<string> DictionaryWords => _dictionaryWords;
     public TimeSpan TodayPracticedDuration { get; private set; } = TimeSpan.Zero;
     public int StreakDays { get; private set; }
 
@@ -102,11 +108,13 @@ public sealed class TypeForgeStateService : ITypeForgeStateService
     public TypeForgeStateService(
         ITypeForgeRepository repository,
         CourseProgressionService courseProgression,
-        CourseCatalogService courseCatalog)
+        CourseCatalogService courseCatalog,
+        IKeystrokeAudioService audioService)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _courseProgression = courseProgression ?? throw new ArgumentNullException(nameof(courseProgression));
         _courseCatalog = courseCatalog ?? throw new ArgumentNullException(nameof(courseCatalog));
+        _audioService = audioService ?? throw new ArgumentNullException(nameof(audioService));
     }
 
     public void Initialize()
@@ -123,7 +131,15 @@ public sealed class TypeForgeStateService : ITypeForgeStateService
     public void SaveSettings()
     {
         Settings.Validate();
+        ApplyAudioSettings();
         Task.Run(() => _repository.SaveSettingsAsync(Settings)).GetAwaiter().GetResult();
+        StateChanged?.Invoke();
+    }
+
+    private void ApplyAudioSettings()
+    {
+        SoundFeedbackMode effectiveMode = Settings.SoundEnabled ? Settings.SoundMode : SoundFeedbackMode.None;
+        _audioService.Configure(effectiveMode, Settings.SoundTheme, Settings.SoundVolume);
     }
 
     public void SelectCourseTrack(string trackId)
@@ -435,7 +451,9 @@ public sealed class TypeForgeStateService : ITypeForgeStateService
         StreakDays = StreakCalculator.CalculateConsecutiveStreak(practiceDates);
 
         _timedPassages = EmbeddedContentLoader.LoadTimedPassagesSafe();
+        _books = EmbeddedContentLoader.LoadBooksSafe();
         _dictionaryWords = EmbeddedContentLoader.LoadDictionaryWords();
+        ApplyAudioSettings();
 
         PendingPromptTitle = "Adaptive Practice · Keybr Focus";
         PendingPromptText = BuildAdaptivePracticeText();

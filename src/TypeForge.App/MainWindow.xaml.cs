@@ -3,11 +3,13 @@ using Microsoft.UI.Text;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using TypeForge.App.Services;
 using TypeForge.App.ViewModels;
 using TypeForge.App.Views;
 using Windows.Graphics;
+using Windows.System;
 using Windows.UI;
 
 namespace TypeForge.App;
@@ -36,7 +38,7 @@ public sealed partial class MainWindow : Window
         AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
         AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
         AppWindow.SetIcon("Assets/AppIcon.ico");
-        AppWindow.Resize(new SizeInt32(1366, 768));
+        ConfigureInitialWindowBounds();
 
         _routeIndicators = new Dictionary<string, (TextBlock, Border)>
         {
@@ -53,7 +55,11 @@ public sealed partial class MainWindow : Window
         _navigation.RegisterRoute("statistics", typeof(StatisticsPage));
         _navigation.RegisterRoute("settings", typeof(SettingsPage));
 
-        _navigation.RouteChanged += _ => UpdateRouteStyles();
+        _navigation.RouteChanged += _ =>
+        {
+            UpdateRouteStyles();
+            DispatcherQueue.TryEnqueue(FocusActiveTypingPage);
+        };
         _navigation.FocusModeChanged += ApplyFocusMode;
         _navigation.ThemeChanged += theme =>
         {
@@ -61,14 +67,46 @@ public sealed partial class MainWindow : Window
             UpdateRouteStyles();
         };
 
+        Activated += (_, args) =>
+        {
+            if (args.WindowActivationState != WindowActivationState.Deactivated)
+            {
+                DispatcherQueue.TryEnqueue(FocusActiveTypingPage);
+            }
+        };
+
         RootGrid.Loaded += (_, _) => AlignTopBarRightInset();
+        RootGrid.SizeChanged += (_, _) => AlignTopBarRightInset();
         RootGrid.ActualThemeChanged += (_, _) => UpdateRouteStyles();
         _updateService.StateChanged += (_, _) =>
             DispatcherQueue.TryEnqueue(ApplyUpdateBadge);
 
         ApplyUpdateBadge();
 
-        _navigation.NavigateTo("practice");
+        _navigation.NavigateTo("course");
+    }
+
+    private void ConfigureInitialWindowBounds()
+    {
+        DisplayArea? displayArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary);
+        if (displayArea is not null)
+        {
+            RectInt32 workArea = displayArea.WorkArea;
+            int width = Math.Min(1366, Math.Max(800, workArea.Width - 64));
+            int height = Math.Min(768, Math.Max(600, workArea.Height - 64));
+            int x = workArea.X + Math.Max(0, (workArea.Width - width) / 2);
+            int y = workArea.Y + Math.Max(0, (workArea.Height - height) / 2);
+            AppWindow.MoveAndResize(new RectInt32(x, y, width, height));
+        }
+        else
+        {
+            AppWindow.Resize(new SizeInt32(1280, 720));
+        }
+
+        if (AppWindow.Presenter is OverlappedPresenter presenter)
+        {
+            presenter.Maximize();
+        }
     }
 
     private void ApplyUpdateBadge()
@@ -124,6 +162,76 @@ public sealed partial class MainWindow : Window
     private void BtnFocusExit_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.ExitFocusModeCommand.Execute(null);
+    }
+
+    private void FocusActiveTypingPage()
+    {
+        if (ContentFrame.Content is PracticePage practicePage)
+        {
+            practicePage.FocusTypingSurface();
+        }
+        else if (ContentFrame.Content is TestPage testPage)
+        {
+            testPage.FocusTypingSurface();
+        }
+    }
+
+    private bool IsEditableOrDialogControlFocused()
+    {
+        if (RootGrid.XamlRoot is null)
+        {
+            return false;
+        }
+
+        object? focused = FocusManager.GetFocusedElement(RootGrid.XamlRoot);
+        return focused is TextBox or RichEditBox or PasswordBox or AutoSuggestBox or ComboBox or Slider;
+    }
+
+    private void RootGrid_CharacterReceived(UIElement sender, CharacterReceivedRoutedEventArgs args)
+    {
+        if (args.Handled || IsEditableOrDialogControlFocused())
+        {
+            return;
+        }
+
+        char ch = Convert.ToChar(args.Character);
+        if (char.IsControl(ch))
+        {
+            return;
+        }
+
+        if (ContentFrame.Content is PracticePage practicePage && practicePage.HandleCharacterInput(ch))
+        {
+            args.Handled = true;
+            practicePage.FocusTypingSurface();
+        }
+        else if (ContentFrame.Content is TestPage testPage && testPage.HandleCharacterInput(ch))
+        {
+            args.Handled = true;
+            testPage.FocusTypingSurface();
+        }
+    }
+
+    private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Handled || IsEditableOrDialogControlFocused())
+        {
+            return;
+        }
+
+        if (e.Key is not (VirtualKey.Back or VirtualKey.Escape))
+        {
+            return;
+        }
+
+        if (ContentFrame.Content is PracticePage practicePage && practicePage.HandleKeyDownInput(e.Key))
+        {
+            e.Handled = true;
+        }
+        else if (ContentFrame.Content is TestPage testPage && testPage.HandleKeyDownInput(e.Key))
+        {
+            e.Handled = true;
+        }
     }
 
     private void UpdateRouteStyles()

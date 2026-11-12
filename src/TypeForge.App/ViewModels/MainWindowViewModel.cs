@@ -10,7 +10,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly ITypeForgeStateService _state;
 
     [ObservableProperty]
-    private string _currentRoute = "practice";
+    private string _currentRoute = "course";
 
     [ObservableProperty]
     private bool _isFocusMode;

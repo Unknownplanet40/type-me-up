@@ -1,20 +1,13 @@
-using System.Runtime.InteropServices.WindowsRuntime;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using Microsoft.UI.Xaml.Shapes;
 using TypeForge.App.ViewModels;
 using TypeForge.Core.Models;
 using TypeForge.Core.Services;
-using Windows.Graphics.Imaging;
-using Windows.Storage;
-using Windows.Storage.Pickers;
-using Windows.Storage.Streams;
 using Windows.UI;
-using WinRT.Interop;
 
 namespace TypeForge.App.Views;
 
@@ -384,57 +377,5 @@ public sealed partial class StatisticsPage : Page
     private void DrillWeakKeys_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.DrillWeakKeysCommand.Execute(null);
-    }
-
-    private void OpenCertificate_Click(object sender, RoutedEventArgs e)
-    {
-        ViewModel.OpenCertificateCommand.Execute(null);
-    }
-
-    private void CloseCertificate_Click(object sender, RoutedEventArgs e)
-    {
-        ViewModel.CloseCertificateCommand.Execute(null);
-    }
-
-    private async void ExportPng_Click(object sender, RoutedEventArgs e)
-    {
-        var renderTarget = new RenderTargetBitmap();
-        await renderTarget.RenderAsync(CertificateSurface);
-        IBuffer pixelBuffer = await renderTarget.GetPixelsAsync();
-        byte[] pixels = pixelBuffer.ToArray();
-
-        var picker = new FileSavePicker
-        {
-            SuggestedStartLocation = PickerLocationId.PicturesLibrary,
-            SuggestedFileName = $"TypeForge_Certificate_{DateTime.Now:yyyyMMdd}"
-        };
-        picker.FileTypeChoices.Add("PNG Image", [".png"]);
-
-        IntPtr hwnd = App.MainWindowHandle;
-        if (hwnd != IntPtr.Zero)
-        {
-            InitializeWithWindow.Initialize(picker, hwnd);
-        }
-
-        StorageFile? file = await picker.PickSaveFileAsync();
-        if (file is null)
-        {
-            return;
-        }
-
-        using IRandomAccessStream stream = await file.OpenAsync(FileAccessMode.ReadWrite);
-        BitmapEncoder encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
-        double dpi = XamlRoot?.RasterizationScale * 96.0 ?? 96.0;
-        encoder.SetPixelData(
-            BitmapPixelFormat.Bgra8,
-            BitmapAlphaMode.Premultiplied,
-            (uint)renderTarget.PixelWidth,
-            (uint)renderTarget.PixelHeight,
-            dpi,
-            dpi,
-            pixels);
-        await encoder.FlushAsync();
-
-        ViewModel.ExportStatusText = $"Saved PNG certificate to {file.Name}";
     }
 }

@@ -647,6 +647,106 @@ public sealed class SqliteTypeForgeRepository : ITypeForgeRepository
             settings.SelectedCourseTrackId = trackStr;
         }
 
+        if (raw.TryGetValue(nameof(UserSettings.ForgiveErrors), out string? forgiveStr)
+            && bool.TryParse(forgiveStr, out bool forgiveErrors))
+        {
+            settings.ForgiveErrors = forgiveErrors;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.SpaceSkipsWords), out string? skipStr)
+            && bool.TryParse(skipStr, out bool spaceSkipsWords))
+        {
+            settings.SpaceSkipsWords = spaceSkipsWords;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.TypingFontSelection), out string? fontSelStr)
+            && !string.IsNullOrWhiteSpace(fontSelStr))
+        {
+            settings.TypingFontSelection = fontSelStr;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.WhitespaceDisplay), out string? wsStr)
+            && Enum.TryParse(wsStr, out WhitespaceDisplayMode wsMode))
+        {
+            settings.WhitespaceDisplay = wsMode;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.CursorShape), out string? cursorShapeStr)
+            && Enum.TryParse(cursorShapeStr, out CursorShapeMode cursorShape))
+        {
+            settings.CursorShape = cursorShape;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.CursorMovement), out string? cursorMoveStr)
+            && Enum.TryParse(cursorMoveStr, out CursorMovementMode cursorMove))
+        {
+            settings.CursorMovement = cursorMove;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.SoundMode), out string? soundModeStr)
+            && Enum.TryParse(soundModeStr, out SoundFeedbackMode soundMode))
+        {
+            settings.SoundMode = soundMode;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.SoundVolume), out string? soundVolStr)
+            && int.TryParse(soundVolStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int soundVol))
+        {
+            settings.SoundVolume = Math.Clamp(soundVol, 0, 100);
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.SoundTheme), out string? soundThemeStr)
+            && Enum.TryParse(soundThemeStr, out SoundTheme soundTheme))
+        {
+            settings.SoundTheme = soundTheme;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.TestTextSource), out string? testSourceStr)
+            && Enum.TryParse(testSourceStr, out TestTextSource testSource))
+        {
+            settings.TestTextSource = testSource;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.TestDurationMode), out string? testDurStr)
+            && Enum.TryParse(testDurStr, out TestDurationMode testDur))
+        {
+            settings.TestDurationMode = testDur;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.CommonWordCount), out string? wordCountStr)
+            && int.TryParse(wordCountStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int wordCount))
+        {
+            settings.CommonWordCount = Math.Clamp(wordCount, UserSettings.MinCommonWordCount, UserSettings.MaxCommonWordCount);
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.SelectedLanguage), out string? langStr)
+            && !string.IsNullOrWhiteSpace(langStr))
+        {
+            settings.SelectedLanguage = langStr;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.CustomWordListCsv), out string? customWordsStr))
+        {
+            settings.CustomWordListCsv = customWordsStr;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.SelectedBookId), out string? bookIdStr)
+            && !string.IsNullOrWhiteSpace(bookIdStr))
+        {
+            settings.SelectedBookId = bookIdStr;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.SelectedBookParagraphIndex), out string? paraStr)
+            && int.TryParse(paraStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int paraIdx))
+        {
+            settings.SelectedBookParagraphIndex = Math.Max(0, paraIdx);
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.CustomTestText), out string? customTestStr))
+        {
+            settings.CustomTestText = customTestStr;
+        }
+
         return settings;
     }
 
@@ -668,7 +768,24 @@ public sealed class SqliteTypeForgeRepository : ITypeForgeRepository
             (nameof(UserSettings.AdaptiveWordMode), settings.AdaptiveWordMode.ToString()),
             (nameof(UserSettings.DailyGoalMinutes), settings.DailyGoalMinutes.ToString(CultureInfo.InvariantCulture)),
             (nameof(UserSettings.OptimalDurationEnabled), settings.OptimalDurationEnabled.ToString()),
-            (nameof(UserSettings.SelectedCourseTrackId), settings.SelectedCourseTrackId)
+            (nameof(UserSettings.SelectedCourseTrackId), settings.SelectedCourseTrackId),
+            (nameof(UserSettings.ForgiveErrors), settings.ForgiveErrors.ToString()),
+            (nameof(UserSettings.SpaceSkipsWords), settings.SpaceSkipsWords.ToString()),
+            (nameof(UserSettings.TypingFontSelection), settings.TypingFontSelection),
+            (nameof(UserSettings.WhitespaceDisplay), settings.WhitespaceDisplay.ToString()),
+            (nameof(UserSettings.CursorShape), settings.CursorShape.ToString()),
+            (nameof(UserSettings.CursorMovement), settings.CursorMovement.ToString()),
+            (nameof(UserSettings.SoundMode), settings.SoundMode.ToString()),
+            (nameof(UserSettings.SoundVolume), settings.SoundVolume.ToString(CultureInfo.InvariantCulture)),
+            (nameof(UserSettings.SoundTheme), settings.SoundTheme.ToString()),
+            (nameof(UserSettings.TestTextSource), settings.TestTextSource.ToString()),
+            (nameof(UserSettings.TestDurationMode), settings.TestDurationMode.ToString()),
+            (nameof(UserSettings.CommonWordCount), settings.CommonWordCount.ToString(CultureInfo.InvariantCulture)),
+            (nameof(UserSettings.SelectedLanguage), settings.SelectedLanguage),
+            (nameof(UserSettings.CustomWordListCsv), settings.CustomWordListCsv),
+            (nameof(UserSettings.SelectedBookId), settings.SelectedBookId),
+            (nameof(UserSettings.SelectedBookParagraphIndex), settings.SelectedBookParagraphIndex.ToString(CultureInfo.InvariantCulture)),
+            (nameof(UserSettings.CustomTestText), settings.CustomTestText)
         };
 
         await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);

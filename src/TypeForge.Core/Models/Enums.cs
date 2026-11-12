@@ -92,3 +92,112 @@ public enum CourseStepKind
     /// <summary>Sentence or paragraph flow drill.</summary>
     ParagraphDrill = 4
 }
+
+/// <summary>Text source selected for the Test view.</summary>
+public enum TestTextSource
+{
+    /// <summary>Random frequency-filtered dictionary words.</summary>
+    CommonWords = 0,
+
+    /// <summary>Pronounceable pseudo-words generated from orthographic patterns.</summary>
+    PseudoWords = 1,
+
+    /// <summary>Sequential paragraphs from an offline book.</summary>
+    BookParagraphs = 2,
+
+    /// <summary>User-provided custom text passage.</summary>
+    CustomText = 3
+}
+
+/// <summary>Duration or character-count mode on the Test screen.</summary>
+public enum TestDurationMode
+{
+    /// <summary>15-second timed sprint.</summary>
+    Seconds15 = 0,
+
+    /// <summary>30-second timed sprint.</summary>
+    Seconds30 = 1,
+
+    /// <summary>1-minute timed test.</summary>
+    Minute1 = 2,
+
+    /// <summary>Fixed 100-character target.</summary>
+    Characters100 = 3,
+
+    /// <summary>Fixed 500-character target.</summary>
+    Characters500 = 4,
+
+    /// <summary>Fixed 1000-character target.</summary>
+    Characters1000 = 5
+}
+
+/// <summary>How spaces are rendered inside the typing stream.</summary>
+public enum WhitespaceDisplayMode
+{
+    /// <summary>Standard space without a visible glyph.</summary>
+    None = 0,
+
+    /// <summary>Bottom bracket / bar indicator.</summary>
+    Bar = 1,
+
+    /// <summary>Centered middle-dot bullet indicator.</summary>
+    Bullet = 2
+}
+
+/// <summary>Visual cursor indicator shape.</summary>
+public enum CursorShapeMode
+{
+    /// <summary>Solid filled character block.</summary>
+    Block = 0,
+
+    /// <summary>Outlined character box.</summary>
+    Box = 1,
+
+    /// <summary>Thin vertical caret line on the left edge.</summary>
+    Line = 2,
+
+    /// <summary>Horizontal underline bar beneath the active character.</summary>
+    Underline = 3
+}
+
+/// <summary>Cursor animation style when advancing between characters.</summary>
+public enum CursorMovementMode
+{
+    /// <summary>Instant discrete jump to the next character.</summary>
+    Jumping = 0,
+
+    /// <summary>Smooth eased glide to the next character.</summary>
+    Smooth = 1
+}
+
+/// <summary>Audio feedback mode during typing.</summary>
+public enum SoundFeedbackMode
+{
+    /// <summary>No keystroke or error sounds.</summary>
+    None = 0,
+
+    /// <summary>Play sound only on typing mistakes.</summary>
+    ErrorsOnly = 1,
+
+    /// <summary>Play sound only on valid keystrokes.</summary>
+    KeysOnly = 2,
+
+    /// <summary>Play both keystroke clicks and error alerts.</summary>
+    All = 3
+}
+
+/// <summary>Built-in keystroke acoustic theme.</summary>
+public enum SoundTheme
+{
+    /// <summary>Crisp balanced mechanical switch click.</summary>
+    Default = 0,
+
+    /// <summary>Dampened tactile thock with warmer low end.</summary>
+    Mechanical = 1,
+
+    /// <summary>Classic typewriter strike and muted carriage snap.</summary>
+    Typewriter = 2,
+
+    /// <summary>Soft low-profile tap.</summary>
+    Soft = 3
+}

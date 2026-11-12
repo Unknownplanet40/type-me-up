@@ -3,80 +3,400 @@
     x:Class="TypeForge.App.Views.TestPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:TypeForge.App.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:TypeForge.App.ViewModels"
+    IsTabStop="True"
     HorizontalAlignment="Stretch"
+    VerticalAlignment="Stretch"
+    CharacterReceived="Page_CharacterReceived"
+    PreviewKeyDown="Page_PreviewKeyDown"
     mc:Ignorable="d">
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalAlignment="Stretch">
-        <Grid Padding="40,16,40,36" RowSpacing="20" HorizontalAlignment="Stretch">
+    <Grid Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <!-- Main Inline Test Surface -->
+        <Grid Padding="40,18,40,26" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0" Spacing="8">
-                <TextBlock Text="Timed Tests" FontSize="26" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                <TextBlock Text="Measure speed and accuracy across countdown durations or custom passages. Timed and custom runs keep course and adaptive unlocks unchanged." FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
-                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4,0,0">
-                    <TextBlock Text="Passage:" FontSize="12" VerticalAlignment="Center" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
-                    <ComboBox
-                        ItemsSource="{x:Bind ViewModel.Passages, Mode=OneWay}"
-                        DisplayMemberPath="Title"
-                        SelectedIndex="{x:Bind ViewModel.SelectedPassageIndex, Mode=TwoWay}"
-                        MinWidth="240" />
+            <!-- Top Bar: Duration / Length Modes + Restart + Settings Gear -->
+            <Grid Grid.Row="0" HorizontalAlignment="Stretch">
+                <StackPanel Orientation="Horizontal" Spacing="20" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Button Tag="Seconds15" Click="BtnMode_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="4,6" AutomationProperties.Name="15 seconds">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="LblSeconds15" Text="15 seconds" FontSize="13" />
+                            <Border x:Name="BarSeconds15" Height="2" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" Visibility="Visible" />
+                        </StackPanel>
+                    </Button>
+                    <Button Tag="Seconds30" Click="BtnMode_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="4,6" AutomationProperties.Name="30 seconds">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="LblSeconds30" Text="30 seconds" FontSize="13" />
+                            <Border x:Name="BarSeconds30" Height="2" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button Tag="Minute1" Click="BtnMode_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="4,6" AutomationProperties.Name="one minute">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="LblMinute1" Text="one minute" FontSize="13" />
+                            <Border x:Name="BarMinute1" Height="2" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button Tag="Characters100" Click="BtnMode_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="4,6" AutomationProperties.Name="100 characters">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="LblCharacters100" Text="100 characters" FontSize="13" />
+                            <Border x:Name="BarCharacters100" Height="2" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button Tag="Characters500" Click="BtnMode_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="4,6" AutomationProperties.Name="500 characters">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="LblCharacters500" Text="500 characters" FontSize="13" />
+                            <Border x:Name="BarCharacters500" Height="2" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
+                    <Button Tag="Characters1000" Click="BtnMode_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="4,6" AutomationProperties.Name="1000 characters">
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="LblCharacters1000" Text="1000 characters" FontSize="13" />
+                            <Border x:Name="BarCharacters1000" Height="2" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" Visibility="Collapsed" />
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
-            </StackPanel>
 
-            <Grid Grid.Row="1" ColumnSpacing="16" HorizontalAlignment="Stretch">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Border Grid.Column="0" Style="{StaticResource ForgeCardStyle}" BorderBrush="{ThemeResource ForgePurpleBrush}" BorderThickness="1.5">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="1 Minute" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                        <TextBlock Text="Quick burst speed benchmark." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
-                        <Button Content="Start 1-Min Test" Style="{StaticResource ForgePrimaryButtonStyle}" HorizontalAlignment="Stretch" Tag="1" Click="StartTimed_Click" />
-                    </StackPanel>
-                </Border>
-
-                <Border Grid.Column="1" Style="{StaticResource ForgeCardStyle}">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="3 Minutes" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                        <TextBlock Text="Balanced endurance typing check." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
-                        <Button Content="Start 3-Min Test" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Tag="3" Click="StartTimed_Click" />
-                    </StackPanel>
-                </Border>
-
-                <Border Grid.Column="2" Style="{StaticResource ForgeCardStyle}">
-                    <StackPanel Spacing="10">
-                        <TextBlock Text="5 Minutes" FontWeight="SemiBold" FontSize="16" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                        <TextBlock Text="Sustained accuracy and speed benchmark." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
-                        <Button Content="Start 5-Min Test" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Tag="5" Click="StartTimed_Click" />
-                    </StackPanel>
-                </Border>
+                <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button Click="BtnRestartTest_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="7" CornerRadius="6" ToolTipService.ToolTip="New test (Tab)" AutomationProperties.Name="Restart test">
+                        <FontIcon Glyph="&#xE72C;" FontSize="14" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    </Button>
+                    <Button Click="BtnOpenSettings_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="7" CornerRadius="6" ToolTipService.ToolTip="Test settings" AutomationProperties.Name="Test settings">
+                        <FontIcon Glyph="&#xE713;" FontSize="14" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    </Button>
+                </StackPanel>
             </Grid>
 
-            <Border Grid.Row="2" Style="{StaticResource ForgeCardStyle}">
-                <StackPanel Spacing="12">
-                    <TextBlock Text="Custom Practice Text" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                    <TextBox
-                        Text="{x:Bind ViewModel.CustomText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                        PlaceholderText="Paste any paragraph, technical notes, or study text here..."
-                        AcceptsReturn="False"
-                        TextWrapping="Wrap"
-                        MinHeight="96" />
-                    <TextBlock
-                        Text="{x:Bind ViewModel.ValidationMessage, Mode=OneWay}"
-                        FontSize="12"
-                        Foreground="{ThemeResource ForgeRedBrush}" />
-                    <Button Content="Launch Custom Practice" Style="{StaticResource ForgePrimaryButtonStyle}" HorizontalAlignment="Left" Click="StartCustom_Click" />
+            <!-- Center Static Typing Stream (~5 lines viewport) -->
+            <controls:TypingStreamView
+                x:Name="TestStreamView"
+                Grid.Row="1"
+                MaxVisibleLines="5"
+                MaxWidth="920"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                Padding="24,12" />
+
+            <!-- Bottom Thin Stats Bar -->
+            <TextBlock
+                x:Name="StatsBarTextBlock"
+                Grid.Row="2"
+                AutomationProperties.AutomationId="TestStatsBar"
+                Text="{x:Bind ViewModel.StatsBarText, Mode=OneWay}"
+                FontFamily="Cascadia Mono, Consolas"
+                FontSize="13"
+                Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                HorizontalAlignment="Center" />
+        </Grid>
+
+        <!-- Test Completion Results Overlay -->
+        <Grid
+            x:Name="ResultsOverlay"
+            Visibility="{x:Bind ViewModel.IsResultsVisible, Mode=OneWay}"
+            Background="#B8000000">
+            <Border
+                Background="{ThemeResource ForgeCardBrush}"
+                BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                BorderThickness="1"
+                CornerRadius="14"
+                Padding="28"
+                Width="460"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <StackPanel Spacing="18">
+                    <StackPanel Spacing="4" HorizontalAlignment="Center">
+                        <TextBlock Text="Test Complete" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" HorizontalAlignment="Center" />
+                        <TextBlock Text="{x:Bind ViewModel.ResultSourceSummary, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="{ThemeResource ForgeCardInnerBrush}" CornerRadius="8" Padding="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.ResultWpm, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Net WPM" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="{ThemeResource ForgeCardInnerBrush}" CornerRadius="8" Padding="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.ResultAccuracy, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource ForgeGreenBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Accuracy" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{ThemeResource ForgeCardInnerBrush}" CornerRadius="8" Padding="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.ResultChars, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Characters" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <TextBlock HorizontalAlignment="Center" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}">
+                        <Run Text="Time: " />
+                        <Run Text="{x:Bind ViewModel.ResultElapsed, Mode=OneWay}" />
+                        <Run Text="   ·   Mistakes: " />
+                        <Run Text="{x:Bind ViewModel.ResultMistakes, Mode=OneWay}" />
+                    </TextBlock>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="New Test" Style="{StaticResource ForgePrimaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnRestartTest_Click" />
+                        <Button Grid.Column="1" Content="Test Settings" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnOpenSettings_Click" />
+                    </Grid>
                 </StackPanel>
             </Border>
         </Grid>
-    </ScrollViewer>
+
+        <!-- Two-Tab Test Settings Dialog Overlay -->
+        <Grid
+            x:Name="SettingsDialogOverlay"
+            Visibility="{x:Bind ViewModel.IsSettingsDialogOpen, Mode=OneWay}"
+            Background="#BC000000">
+            <Border
+                Background="{ThemeResource ForgeCardBrush}"
+                BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="24,18"
+                Width="800"
+                MaxHeight="690"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <Grid RowSpacing="14">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Dialog Top Tabs: Text | Typing -->
+                    <Grid Grid.Row="0" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="0,0,0,1" Padding="0,0,0,8">
+                        <StackPanel Orientation="Horizontal" Spacing="24" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <Button x:Name="TabBtnText" Click="BtnSettingsTabText_Click" Background="Transparent" BorderThickness="0" Padding="4,4" AutomationProperties.Name="Text tab">
+                                <StackPanel Spacing="4">
+                                    <TextBlock x:Name="TabLblText" Text="Text" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <Border x:Name="TabBarText" Height="2.5" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" Visibility="Visible" />
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="TabBtnTyping" Click="BtnSettingsTabTyping_Click" Background="Transparent" BorderThickness="0" Padding="4,4" AutomationProperties.Name="Typing tab">
+                                <StackPanel Spacing="4">
+                                    <TextBlock x:Name="TabLblTyping" Text="Typing" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                    <Border x:Name="TabBarTyping" Height="2.5" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" Visibility="Collapsed" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <TextBlock
+                            x:Name="DialogHeaderSubtitle"
+                            Text="Text Settings: Choose what text to type in the test"
+                            FontSize="12"
+                            Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center" />
+                    </Grid>
+
+                    <!-- Dialog Body -->
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="0,0,6,0">
+                        <Grid>
+                            <!-- TAB 1: TEXT -->
+                            <StackPanel x:Name="TextSettingsPanel" Spacing="14" Visibility="Visible">
+                                <StackPanel Orientation="Horizontal" Spacing="18">
+                                    <RadioButton x:Name="RadioCommonWords" Content="Common words" GroupName="TestTextSource" Tag="CommonWords" Checked="TextSourceRadio_Checked" />
+                                    <RadioButton x:Name="RadioPseudoWords" Content="Pseudo words" GroupName="TestTextSource" Tag="PseudoWords" Checked="TextSourceRadio_Checked" />
+                                    <RadioButton x:Name="RadioBookParagraphs" Content="Book paragraphs" GroupName="TestTextSource" Tag="BookParagraphs" Checked="TextSourceRadio_Checked" />
+                                    <RadioButton x:Name="RadioCustomText" Content="Custom text" GroupName="TestTextSource" Tag="CustomText" Checked="TextSourceRadio_Checked" />
+                                </StackPanel>
+
+                                <!-- Common Words Sub-panel -->
+                                <StackPanel x:Name="CommonWordsPanel" Spacing="12" Visibility="Visible">
+                                    <Grid ColumnSpacing="16">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="200" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="44" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Language:" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <ComboBox x:Name="ComboLanguage" Grid.Column="1" SelectionChanged="ComboLanguage_SelectionChanged" HorizontalAlignment="Stretch" />
+                                        <TextBlock Grid.Column="2" Text="Word list size:" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <Slider Grid.Column="3" Minimum="100" Maximum="1000" StepFrequency="10" Value="{x:Bind ViewModel.DraftCommonWordCount, Mode=TwoWay}" AutomationProperties.Name="Word list size" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="4" Text="{x:Bind ViewModel.DraftCommonWordCount, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Right" />
+                                    </Grid>
+
+                                    <TextBox
+                                        Text="{x:Bind ViewModel.DraftWordListText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap"
+                                        Height="170"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                        FontFamily="Cascadia Mono, Consolas"
+                                        FontSize="12"
+                                        AutomationProperties.Name="Word list editor" />
+
+                                    <TextBlock
+                                        Text="{x:Bind ViewModel.DraftWordStatsText, Mode=OneWay}"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                </StackPanel>
+
+                                <!-- Pseudo Words Sub-panel -->
+                                <Border x:Name="PseudoWordsPanel" Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="8" Padding="16" Visibility="Collapsed">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="Generated Pseudo Words" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                        <TextBlock Text="Pronounceable synthetic words built from English onset, vowel, and coda clusters. Ideal for eliminating muscle-memory guesswork on unfamiliar letter combinations." FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Book Paragraphs Sub-panel -->
+                                <StackPanel x:Name="BookParagraphsPanel" Spacing="12" Visibility="Collapsed">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Book:" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <ComboBox x:Name="ComboBook" Grid.Column="1" SelectedIndex="{x:Bind ViewModel.DraftSelectedBookIndex, Mode=TwoWay}" HorizontalAlignment="Stretch" AutomationProperties.Name="Book selector" />
+                                    </Grid>
+
+                                    <!-- Book Info Card -->
+                                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
+                                        <Grid ColumnSpacing="16">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="96" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Stylised Book Cover Thumbnail -->
+                                            <Border Grid.Column="0" Height="124" CornerRadius="6" BorderBrush="{ThemeResource ForgePurpleBrush}" BorderThickness="1" Background="#1D1829" Padding="8">
+                                                <Grid>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="*" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <FontIcon Grid.Row="0" Glyph="&#xE736;" FontSize="20" Foreground="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Left" />
+                                                    <TextBlock Grid.Row="1" Text="{x:Bind ViewModel.DraftBookTitle, Mode=OneWay}" FontSize="10" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" TextWrapping="Wrap" MaxLines="4" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Row="2" Text="{x:Bind ViewModel.DraftBookAuthor, Mode=OneWay}" FontSize="9" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
+                                                </Grid>
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Text="{x:Bind ViewModel.DraftBookTitle, Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                                    <TextBlock Text="{x:Bind ViewModel.DraftBookAuthor, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                                </StackPanel>
+
+                                                <Grid ColumnSpacing="16" RowSpacing="4">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+                                                    <StackPanel Grid.Row="0" Grid.Column="0">
+                                                        <TextBlock Text="Chapters" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.DraftBookChaptersText, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Row="0" Grid.Column="1">
+                                                        <TextBlock Text="Paragraphs" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.DraftBookParagraphsText, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Row="0" Grid.Column="2">
+                                                        <TextBlock Text="All words" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.DraftBookAllWordsText, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Row="1" Grid.Column="0">
+                                                        <TextBlock Text="Unique words" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.DraftBookUniqueWordsText, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Row="1" Grid.Column="1">
+                                                        <TextBlock Text="Characters" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.DraftBookCharsText, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Row="1" Grid.Column="2">
+                                                        <TextBlock Text="Average word length" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                                        <TextBlock Text="{x:Bind ViewModel.DraftBookAvgLenText, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Paragraph Slider + Prev/Next Buttons -->
+                                    <Grid ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="48" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Paragraph:" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Click="BtnPrevParagraph_Click" Content="&#xE76B;" FontFamily="Segoe MDL2 Assets" Padding="8,4" AutomationProperties.Name="Previous paragraph" />
+                                        <Slider Grid.Column="2" Minimum="1" Maximum="{x:Bind ViewModel.DraftParagraphMax, Mode=OneWay}" Value="{x:Bind ViewModel.DraftParagraphNumber, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="Paragraph number" />
+                                        <Button Grid.Column="3" Click="BtnNextParagraph_Click" Content="&#xE76C;" FontFamily="Segoe MDL2 Assets" Padding="8,4" AutomationProperties.Name="Next paragraph" />
+                                        <TextBlock Grid.Column="4" VerticalAlignment="Center" HorizontalAlignment="Right" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}">
+                                            <Run Text="#" /><Run Text="{x:Bind ViewModel.DraftParagraphNumber, Mode=OneWay}" />
+                                        </TextBlock>
+                                    </Grid>
+
+                                    <!-- Paragraph Preview List -->
+                                    <StackPanel x:Name="ParagraphPreviewsPanel" Spacing="4" />
+                                </StackPanel>
+
+                                <!-- Custom Text Sub-panel -->
+                                <StackPanel x:Name="CustomTextPanel" Spacing="8" Visibility="Collapsed">
+                                    <TextBlock Text="Custom text passage" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <TextBox
+                                        Text="{x:Bind ViewModel.DraftCustomText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        AcceptsReturn="True"
+                                        TextWrapping="Wrap"
+                                        Height="210"
+                                        ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                        PlaceholderText="Paste or write custom text for your typing test..."
+                                        AutomationProperties.Name="Custom test passage" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- TAB 2: TYPING -->
+                            <controls:TypingSettingsControl x:Name="TypingSettingsControl" Visibility="Collapsed" />
+                        </Grid>
+                    </ScrollViewer>
+
+                    <!-- Dialog Footer: Bottom-Right DONE Button -->
+                    <Grid Grid.Row="2" Padding="0,4,0,0">
+                        <Button
+                            Click="BtnDoneSettings_Click"
+                            Style="{StaticResource ForgePrimaryButtonStyle}"
+                            HorizontalAlignment="Right"
+                            Padding="18,8"
+                            AutomationProperties.Name="DONE">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon Glyph="&#xE73E;" FontSize="14" />
+                                <TextBlock Text="DONE" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
 </Page>

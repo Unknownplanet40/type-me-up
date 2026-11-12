@@ -25,6 +25,8 @@ public sealed class TypingEngine
 
     private readonly string _targetText;
     private readonly bool _stopOnError;
+    private readonly bool _forgiveErrors;
+    private readonly bool _spaceSkipsWords;
     private readonly TimeProvider _timeProvider;
     private readonly SessionType _sessionType;
     private readonly string? _lessonId;
@@ -37,6 +39,7 @@ public sealed class TypingEngine
     private int _correctKeystrokes;
     private int _mistakes;
     private int _uncorrectedErrors;
+    private bool _pendingStopError;
     private bool _hasStarted;
     private bool _isCompleted;
     private DateTimeOffset _startedAt;
@@ -51,7 +54,9 @@ public sealed class TypingEngine
         bool stopOnError = false,
         TimeProvider? timeProvider = null,
         SessionType sessionType = SessionType.AdaptivePractice,
-        string? lessonId = null)
+        string? lessonId = null,
+        bool forgiveErrors = false,
+        bool spaceSkipsWords = false)
     {
         if (string.IsNullOrEmpty(targetText))
         {
@@ -60,6 +65,8 @@ public sealed class TypingEngine
 
         _targetText = targetText;
         _stopOnError = stopOnError;
+        _forgiveErrors = forgiveErrors;
+        _spaceSkipsWords = spaceSkipsWords;
         _timeProvider = timeProvider ?? TimeProvider.System;
         _sessionType = sessionType;
         _lessonId = lessonId;
@@ -99,6 +106,46 @@ public sealed class TypingEngine
         }
 
         char expectedChar = _targetText[_cursorIndex];
+
+        if (_spaceSkipsWords &&
+            inputChar == ' ' &&
+            expectedChar != ' ' &&
+            _cursorIndex > 0 &&
+            _targetText[_cursorIndex - 1] != ' ')
+        {
+            _pendingStopError = false;
+            while (_cursorIndex < _targetText.Length && _targetText[_cursorIndex] != ' ')
+            {
+                char skippedChar = _targetText[_cursorIndex];
+                RecordKeyAccumulator(char.ToUpperInvariant(skippedChar), isMatch: false, latencyMs);
+                _totalKeystrokes++;
+                _mistakes++;
+                _uncorrectedErrors++;
+                _slotStates[_cursorIndex] = TypingCharacterState.Incorrect;
+                _typedText.Append(skippedChar);
+                _cursorIndex++;
+                latencyMs = null;
+            }
+
+            if (_cursorIndex < _targetText.Length && _targetText[_cursorIndex] == ' ')
+            {
+                RecordKeyAccumulator(' ', isMatch: true, latencyMs: null);
+                _totalKeystrokes++;
+                _correctKeystrokes++;
+                _slotStates[_cursorIndex] = TypingCharacterState.Correct;
+                _typedText.Append(' ');
+                _cursorIndex++;
+            }
+
+            if (_cursorIndex >= _targetText.Length)
+            {
+                _isCompleted = true;
+                _completedAt = now;
+            }
+
+            return true;
+        }
+
         char keyBucket = char.ToUpperInvariant(expectedChar);
         bool isMatch = inputChar == expectedChar;
 
@@ -107,6 +154,7 @@ public sealed class TypingEngine
 
         if (isMatch)
         {
+            _pendingStopError = false;
             _correctKeystrokes++;
             _slotStates[_cursorIndex] = TypingCharacterState.Correct;
             _typedText.Append(inputChar);
@@ -121,6 +169,10 @@ public sealed class TypingEngine
                 _slotStates[_cursorIndex] = TypingCharacterState.Incorrect;
                 _typedText.Append(inputChar);
                 _cursorIndex++;
+            }
+            else
+            {
+                _pendingStopError = true;
             }
         }
 
@@ -173,6 +225,7 @@ public sealed class TypingEngine
         _correctKeystrokes = 0;
         _mistakes = 0;
         _uncorrectedErrors = 0;
+        _pendingStopError = false;
         _hasStarted = false;
         _isCompleted = false;
         _startedAt = default;
@@ -194,6 +247,8 @@ public sealed class TypingEngine
             states[_cursorIndex] = TypingCharacterState.Current;
         }
 
+        double accuracy = CalculateAccuracy();
+
         return new TypingSnapshot(
             TargetText: _targetText,
             TypedText: _typedText.ToString(),
@@ -205,7 +260,7 @@ public sealed class TypingEngine
             Elapsed: elapsed,
             LiveGrossWpm: MetricsCalculator.CalculateGrossWpm(effectiveTypedCount, elapsed),
             LiveNetWpm: MetricsCalculator.CalculateNetWpm(effectiveTypedCount, _uncorrectedErrors, elapsed),
-            LiveAccuracyPercentage: MetricsCalculator.CalculateAccuracyPercentage(_correctKeystrokes, _totalKeystrokes),
+            LiveAccuracyPercentage: accuracy,
             IsCompleted: _isCompleted,
             CharacterStates: states);
     }
@@ -232,7 +287,7 @@ public sealed class TypingEngine
             Duration = elapsed,
             GrossWpm = MetricsCalculator.CalculateGrossWpm(effectiveTypedCount, elapsed),
             NetWpm = MetricsCalculator.CalculateNetWpm(effectiveTypedCount, _uncorrectedErrors, elapsed),
-            AccuracyPercentage = MetricsCalculator.CalculateAccuracyPercentage(_correctKeystrokes, _totalKeystrokes),
+            AccuracyPercentage = CalculateAccuracy(),
             CorrectCharacters = _correctKeystrokes,
             TotalKeystrokes = _totalKeystrokes,
             Mistakes = _mistakes,
@@ -242,6 +297,18 @@ public sealed class TypingEngine
 
         result.Validate();
         return result;
+    }
+
+    private double CalculateAccuracy()
+    {
+        if (!_forgiveErrors)
+        {
+            return MetricsCalculator.CalculateAccuracyPercentage(_correctKeystrokes, _totalKeystrokes);
+        }
+
+        int effectiveErrors = _uncorrectedErrors + (_pendingStopError ? 1 : 0);
+        int effectiveTotal = _correctKeystrokes + effectiveErrors;
+        return MetricsCalculator.CalculateAccuracyPercentage(_correctKeystrokes, effectiveTotal);
     }
 
     private TimeSpan GetElapsed()

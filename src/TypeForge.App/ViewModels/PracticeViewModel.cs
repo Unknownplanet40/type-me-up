@@ -13,6 +13,9 @@ public sealed partial class PracticeViewModel : ObservableObject
     private readonly IKeystrokeAudioService _audio;
     private TypingEngine _engine = null!;
     private TimeSpan? _timedLimit;
+    private bool _engineStopOnError;
+    private bool _engineForgiveErrors;
+    private bool _engineSpaceSkipsWords;
 
     [ObservableProperty]
     private string _promptTitle = string.Empty;
@@ -54,6 +57,21 @@ public sealed partial class PracticeViewModel : ObservableObject
     private int _typingFontSize = 28;
 
     [ObservableProperty]
+    private string _typingFontSelection = "Cascadia Mono";
+
+    [ObservableProperty]
+    private WhitespaceDisplayMode _whitespaceDisplay = WhitespaceDisplayMode.Bullet;
+
+    [ObservableProperty]
+    private CursorShapeMode _cursorShape = CursorShapeMode.Underline;
+
+    [ObservableProperty]
+    private CursorMovementMode _cursorMovement = CursorMovementMode.Smooth;
+
+    [ObservableProperty]
+    private bool _isSettingsDialogOpen;
+
+    [ObservableProperty]
     private string _resultWpm = "0";
 
     [ObservableProperty]
@@ -70,6 +88,7 @@ public sealed partial class PracticeViewModel : ObservableObject
 
     public TypingSnapshot? CurrentSnapshot { get; private set; }
     public SessionResult? LastResult { get; private set; }
+    public UserSettings CurrentSettings => _state.Settings;
     public IReadOnlyDictionary<char, KeyMetric> KeyMetrics => _state.AggregateKeyMetrics;
     public IReadOnlySet<char> UnlockedAdaptiveKeys =>
         _state.AdaptiveStates
@@ -97,15 +116,24 @@ public sealed partial class PracticeViewModel : ObservableObject
         ShowKeyboard = _state.Settings.ShowVirtualKeyboard;
         KeyboardColorMode = _state.Settings.KeyboardColorMode;
         TypingFontSize = _state.Settings.TypingFontSize;
-        IsMuted = !_state.Settings.SoundEnabled;
+        TypingFontSelection = _state.Settings.TypingFontSelection;
+        WhitespaceDisplay = _state.Settings.WhitespaceDisplay;
+        CursorShape = _state.Settings.CursorShape;
+        CursorMovement = _state.Settings.CursorMovement;
+        IsMuted = !_state.Settings.SoundEnabled || _state.Settings.SoundMode == SoundFeedbackMode.None;
 
         _timedLimit = _state.PendingTimedLimit;
         PromptTitle = _state.PendingPromptTitle;
+        _engineStopOnError = _state.Settings.StopOnError;
+        _engineForgiveErrors = _state.Settings.ForgiveErrors;
+        _engineSpaceSkipsWords = _state.Settings.SpaceSkipsWords;
         _engine = new TypingEngine(
             _state.PendingPromptText,
-            stopOnError: _state.Settings.StopOnError,
+            stopOnError: _engineStopOnError,
             sessionType: _state.PendingSessionType,
-            lessonId: _state.PendingLessonId);
+            lessonId: _state.PendingLessonId,
+            forgiveErrors: _engineForgiveErrors,
+            spaceSkipsWords: _engineSpaceSkipsWords);
 
         IsResultsVisible = false;
         LastResult = null;
@@ -113,9 +141,40 @@ public sealed partial class PracticeViewModel : ObservableObject
         PublishSnapshot();
     }
 
+    public void OpenSettingsDialog()
+    {
+        IsSettingsDialogOpen = true;
+    }
+
+    public void ApplySettingsAndClose()
+    {
+        _state.SaveSettings();
+
+        bool behaviorChanged = _engineStopOnError != _state.Settings.StopOnError
+            || _engineForgiveErrors != _state.Settings.ForgiveErrors
+            || _engineSpaceSkipsWords != _state.Settings.SpaceSkipsWords;
+
+        IsSettingsDialogOpen = false;
+        if (behaviorChanged)
+        {
+            LoadPendingSession();
+            return;
+        }
+
+        ShowKeyboard = _state.Settings.ShowVirtualKeyboard;
+        KeyboardColorMode = _state.Settings.KeyboardColorMode;
+        TypingFontSize = _state.Settings.TypingFontSize;
+        TypingFontSelection = _state.Settings.TypingFontSelection;
+        WhitespaceDisplay = _state.Settings.WhitespaceDisplay;
+        CursorShape = _state.Settings.CursorShape;
+        CursorMovement = _state.Settings.CursorMovement;
+        IsMuted = !_state.Settings.SoundEnabled || _state.Settings.SoundMode == SoundFeedbackMode.None;
+        PublishSnapshot();
+    }
+
     public bool HandleCharacter(char inputChar)
     {
-        if (IsResultsVisible)
+        if (IsResultsVisible || IsSettingsDialogOpen)
         {
             return false;
         }
@@ -148,7 +207,7 @@ public sealed partial class PracticeViewModel : ObservableObject
 
     public bool HandleBackspace()
     {
-        if (IsResultsVisible)
+        if (IsResultsVisible || IsSettingsDialogOpen)
         {
             return false;
         }
@@ -164,7 +223,7 @@ public sealed partial class PracticeViewModel : ObservableObject
 
     public void TickTimer()
     {
-        if (IsResultsVisible || CurrentSnapshot is null || CurrentSnapshot.TotalKeystrokes == 0)
+        if (IsResultsVisible || IsSettingsDialogOpen || CurrentSnapshot is null || CurrentSnapshot.TotalKeystrokes == 0)
         {
             return;
         }
@@ -209,6 +268,11 @@ public sealed partial class PracticeViewModel : ObservableObject
     {
         IsMuted = !IsMuted;
         _state.Settings.SoundEnabled = !IsMuted;
+        if (!IsMuted && _state.Settings.SoundMode == SoundFeedbackMode.None)
+        {
+            _state.Settings.SoundMode = SoundFeedbackMode.All;
+        }
+
         _state.SaveSettings();
     }
 

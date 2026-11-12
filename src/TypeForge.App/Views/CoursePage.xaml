@@ -122,10 +122,14 @@
                         </Grid>
 
                         <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <FontIcon Glyph="&#xE946;" FontSize="14" Foreground="{ThemeResource ForgePurpleBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
-                                <TextBlock x:Name="ActiveUnitTip" Text="" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
-                            </StackPanel>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <FontIcon Grid.Column="0" Glyph="&#xE946;" FontSize="14" Foreground="{ThemeResource ForgePurpleBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+                                <TextBlock Grid.Column="1" x:Name="ActiveUnitTip" Text="" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
+                            </Grid>
                         </Border>
 
                         <StackPanel x:Name="ExercisesHost" Spacing="8" />
