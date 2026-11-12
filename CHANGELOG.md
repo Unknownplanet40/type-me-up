@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-12
+
+### Added
+- Learning engine: BigramTracker, WeaknessScorer, ReviewScheduler, PlacementEngine, SessionPlanner, InsightEngine, FatigueDetector, PaceCaretCalculator, FingerMap, and CapsLockGuard (3d64f7e)
+- Multi-profile system: ProfileService (per-profile SQLite DBs + legacy typeforge.db migration), SwitchableRepository, "Who's typing?" launch picker, top-bar profile switcher, Reset Progress (Fresh Start), and StatisticsPage Profile Leaderboard (3d64f7e)
+- Typing Rhythm (Consistency % + Raw WPM) and "Practice Missed Words" replay on Practice and Test Results overlays (3d64f7e)
+- Real-world test pools (Quotes, Code snippets, Numbers, Punctuation) and custom branding assets (3d64f7e)
+- Unit tests in LearningEngineTests (105/105 passing) (3d64f7e)
+
+### Changed
+- rewrite README as product overview for TypeForge (875ecd0)
+- Upgraded SQLite schema to v3 with BigramStatistics, KeyReviewSchedule, and PlacementResults (3d64f7e)
+- Redesigned CoursePage with Focus Keys card, Finger Guide, accuracy-first early lessons, keyboard fade ramp, and configurable pass gates (3d64f7e)
+- Updated ThemePaletteTokens and App.xaml for WCAG AA contrast compliance (3d64f7e)
+- Replaced template README.md with TypeForge documentation (3d64f7e)
+- point version.json at release v0.4.0 [skip ci] (afd7012)
+
 ## [0.4.0] - 2026-11-12
 
 ### Added
