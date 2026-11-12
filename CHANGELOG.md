@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-12
+
+### Added
+- MetronomeCalculator in TypeForge.Core with PerKeystroke and PerWord beat intervals and Auto WPM resolution (d8c3493)
+- MetronomeBeatMode, MetronomeTargetMode, and persisted metronome settings in UserSettings and SqliteTypeForgeRepository (d8c3493)
+- Synthesized woodblock PlayMetronomeTick cue in KeystrokeAudioService and shared MetronomeRunner timer (d8c3493)
+- HUD Metronome toggle + beat pulse dot in PracticePage and TestPage, plus configuration controls in SettingsPage and TypingSettingsControl (d8c3493)
+- Unit tests in LearningEngineTests (115/115 passing) (d8c3493)
+
+### Changed
+- point version.json at release v0.5.3 [skip ci] (8cbff12)
+
+### Fixed
+- disable navigation and input until launch profile is selected (3f3cb5b)
+
 ## [0.5.3] - 2026-11-12
 
 ### Changed
