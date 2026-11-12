@@ -1402,4 +1402,70 @@ public sealed class LearningEngineTests
             }
         }
     }
+
+    [Theory]
+    [InlineData(MetronomeTargetMode.Fixed, 50, 80.0, 50)]
+    [InlineData(MetronomeTargetMode.Auto, 40, 0.0, 40)]
+    [InlineData(MetronomeTargetMode.Auto, 40, 62.4, 67)]
+    [InlineData(MetronomeTargetMode.Auto, 40, 150.0, 120)]
+    [InlineData(MetronomeTargetMode.Fixed, 5, 0.0, 20)]
+    public void MetronomeCalculator_ResolveTargetWpm_HandlesFixedAutoAndClamping(
+        MetronomeTargetMode mode,
+        int fixedWpm,
+        double avgWpm,
+        int expected)
+    {
+        Assert.Equal(expected, MetronomeCalculator.ResolveTargetWpm(mode, fixedWpm, avgWpm));
+    }
+
+    [Theory]
+    [InlineData(60, MetronomeBeatMode.PerKeystroke, 200.0)]
+    [InlineData(40, MetronomeBeatMode.PerKeystroke, 300.0)]
+    [InlineData(60, MetronomeBeatMode.PerWord, 1000.0)]
+    [InlineData(30, MetronomeBeatMode.PerWord, 2000.0)]
+    public void MetronomeCalculator_GetBeatIntervalMs_ComputesCharAndWordBeats(
+        int targetWpm,
+        MetronomeBeatMode beatMode,
+        double expectedMs)
+    {
+        Assert.Equal(expectedMs, MetronomeCalculator.GetBeatIntervalMs(targetWpm, beatMode), precision: 3);
+    }
+
+    [Fact]
+    public async Task SqliteTypeForgeRepository_PersistsMetronomeSettings()
+    {
+        string tempDb = Path.Combine(Path.GetTempPath(), $"tf_met_{Guid.NewGuid():N}.db");
+        try
+        {
+            var repo = new SqliteTypeForgeRepository(tempDb);
+            await repo.InitializeAsync();
+
+            var settings = new UserSettings
+            {
+                MetronomeEnabled = true,
+                MetronomeBeatMode = MetronomeBeatMode.PerWord,
+                MetronomeTargetMode = MetronomeTargetMode.Auto,
+                MetronomeTargetWpm = 75,
+                MetronomeAudioEnabled = false,
+                MetronomeVisualEnabled = true
+            };
+            await repo.SaveSettingsAsync(settings);
+
+            UserSettings loaded = await repo.GetSettingsAsync();
+            Assert.True(loaded.MetronomeEnabled);
+            Assert.Equal(MetronomeBeatMode.PerWord, loaded.MetronomeBeatMode);
+            Assert.Equal(MetronomeTargetMode.Auto, loaded.MetronomeTargetMode);
+            Assert.Equal(75, loaded.MetronomeTargetWpm);
+            Assert.False(loaded.MetronomeAudioEnabled);
+            Assert.True(loaded.MetronomeVisualEnabled);
+        }
+        finally
+        {
+            Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+            if (File.Exists(tempDb))
+            {
+                File.Delete(tempDb);
+            }
+        }
+    }
 }

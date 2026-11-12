@@ -897,6 +897,44 @@ public sealed class SqliteTypeForgeRepository : ITypeForgeRepository
             settings.CourseMaxMistakes = Math.Clamp(maxMistakes, UserSettings.MinCourseMaxMistakes, UserSettings.MaxCourseMaxMistakes);
         }
 
+        if (raw.TryGetValue(nameof(UserSettings.MetronomeEnabled), out string? metEnabledStr)
+            && bool.TryParse(metEnabledStr, out bool metEnabled))
+        {
+            settings.MetronomeEnabled = metEnabled;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.MetronomeBeatMode), out string? metBeatStr)
+            && Enum.TryParse(metBeatStr, out MetronomeBeatMode metBeat)
+            && Enum.IsDefined(metBeat))
+        {
+            settings.MetronomeBeatMode = metBeat;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.MetronomeTargetMode), out string? metTargetStr)
+            && Enum.TryParse(metTargetStr, out MetronomeTargetMode metTarget)
+            && Enum.IsDefined(metTarget))
+        {
+            settings.MetronomeTargetMode = metTarget;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.MetronomeTargetWpm), out string? metWpmStr)
+            && int.TryParse(metWpmStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int metWpm))
+        {
+            settings.MetronomeTargetWpm = Math.Clamp(metWpm, UserSettings.MinMetronomeWpm, UserSettings.MaxMetronomeWpm);
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.MetronomeAudioEnabled), out string? metAudioStr)
+            && bool.TryParse(metAudioStr, out bool metAudio))
+        {
+            settings.MetronomeAudioEnabled = metAudio;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.MetronomeVisualEnabled), out string? metVisualStr)
+            && bool.TryParse(metVisualStr, out bool metVisual))
+        {
+            settings.MetronomeVisualEnabled = metVisual;
+        }
+
         return settings;
     }
 
@@ -944,7 +982,13 @@ public sealed class SqliteTypeForgeRepository : ITypeForgeRepository
             (nameof(UserSettings.SelectedRealWorldPoolId), settings.SelectedRealWorldPoolId),
             (nameof(UserSettings.CoursePassGateEnabled), settings.CoursePassGateEnabled.ToString()),
             (nameof(UserSettings.CourseMinAccuracy), settings.CourseMinAccuracy.ToString(CultureInfo.InvariantCulture)),
-            (nameof(UserSettings.CourseMaxMistakes), settings.CourseMaxMistakes.ToString(CultureInfo.InvariantCulture))
+            (nameof(UserSettings.CourseMaxMistakes), settings.CourseMaxMistakes.ToString(CultureInfo.InvariantCulture)),
+            (nameof(UserSettings.MetronomeEnabled), settings.MetronomeEnabled.ToString()),
+            (nameof(UserSettings.MetronomeBeatMode), settings.MetronomeBeatMode.ToString()),
+            (nameof(UserSettings.MetronomeTargetMode), settings.MetronomeTargetMode.ToString()),
+            (nameof(UserSettings.MetronomeTargetWpm), settings.MetronomeTargetWpm.ToString(CultureInfo.InvariantCulture)),
+            (nameof(UserSettings.MetronomeAudioEnabled), settings.MetronomeAudioEnabled.ToString()),
+            (nameof(UserSettings.MetronomeVisualEnabled), settings.MetronomeVisualEnabled.ToString())
         };
 
         await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);

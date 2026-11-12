@@ -329,6 +329,58 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Spacing="2">
+                            <TextBlock Text="Rhythm Metronome" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Beat guide synced to Target WPM; starts on your first keystroke in Practice and Test." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.MetronomeEnabled, Mode=TwoWay}" OnContent="On" OffContent="Off" AutomationProperties.Name="Enable rhythm metronome" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Grid ColumnSpacing="16" Visibility="{x:Bind ViewModel.MetronomeEnabled, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Metronome Beat &amp; Target" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Choose per-keystroke or per-word beats, and Fixed WPM or Auto (Personal Avg + 5)." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <ComboBox Width="150" SelectedIndex="{x:Bind ViewModel.MetronomeBeatModeIndex, Mode=TwoWay}" AutomationProperties.Name="Metronome beat subdivision">
+                                <ComboBoxItem Content="Per Keystroke" />
+                                <ComboBoxItem Content="Per Word" />
+                            </ComboBox>
+                            <ComboBox Width="170" SelectedIndex="{x:Bind ViewModel.MetronomeTargetModeIndex, Mode=TwoWay}" AutomationProperties.Name="Metronome target mode">
+                                <ComboBoxItem Content="Fixed WPM" />
+                                <ComboBoxItem Content="Auto (Avg + 5)" />
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid ColumnSpacing="16" Visibility="{x:Bind ViewModel.MetronomeEnabled, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Metronome Target WPM &amp; Channels" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Fixed/fallback WPM (20 - 120) plus independent Audio Tick and Visual Pulse toggles." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <Slider Width="140" Minimum="20" Maximum="120" StepFrequency="5" Value="{x:Bind ViewModel.MetronomeTargetWpm, Mode=TwoWay}" AutomationProperties.Name="Metronome target WPM" />
+                            <TextBlock Text="{x:Bind ViewModel.MetronomeTargetWpm, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" VerticalAlignment="Center" Width="28" />
+                            <CheckBox Content="Audio" IsChecked="{x:Bind ViewModel.MetronomeAudioEnabled, Mode=TwoWay}" MinWidth="0" />
+                            <CheckBox Content="Visual" IsChecked="{x:Bind ViewModel.MetronomeVisualEnabled, Mode=TwoWay}" MinWidth="0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
                             <TextBlock Text="Placement Diagnostic" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
                             <TextBlock Text="Run a 60-second common-words check to recalibrate your recommended course and unlocked keys." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                         </StackPanel>

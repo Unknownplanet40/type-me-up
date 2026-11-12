@@ -59,6 +59,12 @@ public sealed class UserSettings
     /// <summary>Maximum allowed pace caret target WPM.</summary>
     public const int MaxPaceTargetWpm = 250;
 
+    /// <summary>Minimum allowed rhythm metronome target WPM.</summary>
+    public const int MinMetronomeWpm = 20;
+
+    /// <summary>Maximum allowed rhythm metronome target WPM.</summary>
+    public const int MaxMetronomeWpm = 120;
+
     /// <summary>Gets or sets the active structured course track identifier.</summary>
     public string SelectedCourseTrackId { get; set; } = "fast_touch";
 
@@ -127,6 +133,24 @@ public sealed class UserSettings
 
     /// <summary>Gets or sets when the finger-guide hand diagram is displayed.</summary>
     public FingerGuideMode FingerGuideMode { get; set; } = FingerGuideMode.CourseDefault;
+
+    /// <summary>Gets or sets whether the rhythm metronome is enabled during typing sessions.</summary>
+    public bool MetronomeEnabled { get; set; } = false;
+
+    /// <summary>Gets or sets whether the metronome beats per keystroke or per 5-character word.</summary>
+    public MetronomeBeatMode MetronomeBeatMode { get; set; } = MetronomeBeatMode.PerKeystroke;
+
+    /// <summary>Gets or sets whether the metronome uses a fixed WPM or auto (personal average + 5 WPM).</summary>
+    public MetronomeTargetMode MetronomeTargetMode { get; set; } = MetronomeTargetMode.Fixed;
+
+    /// <summary>Gets or sets the fixed rhythm metronome target WPM (20–120).</summary>
+    public int MetronomeTargetWpm { get; set; } = 40;
+
+    /// <summary>Gets or sets whether the metronome plays an audio tick on each beat.</summary>
+    public bool MetronomeAudioEnabled { get; set; } = true;
+
+    /// <summary>Gets or sets whether the metronome pulses a visual indicator in the HUD on each beat.</summary>
+    public bool MetronomeVisualEnabled { get; set; } = true;
 
     /// <summary>Gets or sets whether WPM is always shown during early accuracy-first course lessons.</summary>
     public bool ShowWpmInCourse { get; set; } = false;
@@ -211,6 +235,13 @@ public sealed class UserSettings
             throw new ArgumentOutOfRangeException(
                 nameof(CourseMaxMistakes),
                 $"Course maximum mistakes must be between {MinCourseMaxMistakes} and {MaxCourseMaxMistakes}.");
+        }
+
+        if (MetronomeTargetWpm < MinMetronomeWpm || MetronomeTargetWpm > MaxMetronomeWpm)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(MetronomeTargetWpm),
+                $"Metronome target WPM must be between {MinMetronomeWpm} and {MaxMetronomeWpm}.");
         }
     }
 }

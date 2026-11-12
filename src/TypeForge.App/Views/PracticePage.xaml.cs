@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
+using TypeForge.App.Services;
 using TypeForge.App.ViewModels;
 using TypeForge.Core.Engine;
 using TypeForge.Core.Models;
@@ -17,6 +18,8 @@ public sealed partial class PracticePage : Page
         "ENIARLTOSUDYCGHPMKBWFZVXQJ".ToCharArray();
 
     private readonly DispatcherTimer _hudTimer;
+    private readonly ITypeForgeStateService _state;
+    private readonly MetronomeRunner _metronome;
     private readonly Dictionary<char, (Border OuterGlow, Border InnerPill, TextBlock Label)> _pillLookup = new();
 
     public PracticeViewModel ViewModel { get; }
@@ -24,6 +27,8 @@ public sealed partial class PracticePage : Page
     public PracticePage()
     {
         ViewModel = App.GetService<PracticeViewModel>();
+        _state = App.GetService<ITypeForgeStateService>();
+        _metronome = new MetronomeRunner(DispatcherQueue, App.GetService<IKeystrokeAudioService>());
         InitializeComponent();
         BuildKeyPillStrip();
 
@@ -93,6 +98,7 @@ public sealed partial class PracticePage : Page
         ViewModel.SnapshotUpdated += OnSnapshotUpdated;
         VirtualKeyboard.Visibility = ViewModel.ShowKeyboard ? Visibility.Visible : Visibility.Collapsed;
         IconMute.Glyph = ViewModel.IsMuted ? "\uE74F" : "\uE767";
+        UpdateMetronomeUi();
 
         if (ViewModel.CurrentSnapshot is not null)
         {
@@ -107,6 +113,7 @@ public sealed partial class PracticePage : Page
     private void PracticePage_Unloaded(object sender, RoutedEventArgs e)
     {
         _hudTimer.Stop();
+        _metronome.Stop();
         PracticeSettingsControl.StopPreview();
         ViewModel.SnapshotUpdated -= OnSnapshotUpdated;
     }
@@ -114,6 +121,60 @@ public sealed partial class PracticePage : Page
     private void OnSnapshotUpdated(TypingSnapshot snapshot)
     {
         RenderSnapshot(snapshot);
+        SyncMetronome(snapshot);
+    }
+
+    private void SyncMetronome(TypingSnapshot snapshot)
+    {
+        UpdateMetronomeUi();
+        if (snapshot.CursorIndex > 0 && !snapshot.IsCompleted && _state.Settings.MetronomeEnabled)
+        {
+            if (!_metronome.IsRunning)
+            {
+                double avgWpm = _state.Sessions.Count == 0 ? 0.0 : _state.Sessions.Average(s => s.NetWpm);
+                _metronome.Start(_state.Settings, avgWpm, PulseMetronomeDot);
+            }
+        }
+        else
+        {
+            _metronome.Stop();
+        }
+    }
+
+    private void UpdateMetronomeUi()
+    {
+        bool enabled = _state.Settings.MetronomeEnabled;
+        double avgWpm = _state.Sessions.Count == 0 ? 0.0 : _state.Sessions.Average(s => s.NetWpm);
+        int targetWpm = MetronomeCalculator.ResolveTargetWpm(
+            _state.Settings.MetronomeTargetMode,
+            _state.Settings.MetronomeTargetWpm,
+            avgWpm);
+        LblMetronome.Text = enabled ? $"{targetWpm} WPM" : "Metronome";
+        MetronomePulseDot.Visibility = enabled && _state.Settings.MetronomeVisualEnabled
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private async void PulseMetronomeDot()
+    {
+        MetronomePulseDot.Opacity = 1.0;
+        await Task.Delay(95);
+        DispatcherQueue.TryEnqueue(() => MetronomePulseDot.Opacity = 0.35);
+    }
+
+    private void BtnMetronome_Click(object sender, RoutedEventArgs e)
+    {
+        _state.Settings.MetronomeEnabled = !_state.Settings.MetronomeEnabled;
+        _state.SaveSettings();
+        if (ViewModel.CurrentSnapshot is not null)
+        {
+            SyncMetronome(ViewModel.CurrentSnapshot);
+        }
+        else
+        {
+            UpdateMetronomeUi();
+        }
+        FocusTypingSurface();
     }
 
     private void BuildKeyPillStrip()

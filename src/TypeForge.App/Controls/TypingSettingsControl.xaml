@@ -40,6 +40,40 @@
             </StackPanel>
         </Border>
 
+        <!-- Rhythm Metronome -->
+        <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
+            <StackPanel Spacing="10">
+                <TextBlock Text="Rhythm Metronome" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                <CheckBox x:Name="ChkMetronomeEnabled" Content="Enable rhythm metronome (starts on first keystroke)" Checked="MetronomeOption_Changed" Unchecked="MetronomeOption_Changed" />
+                <StackPanel x:Name="MetronomeDetailsPanel" Spacing="10" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <ComboBox x:Name="ComboMetronomeBeat" Width="150" Header="Beat">
+                            <ComboBoxItem Content="Per Keystroke" />
+                            <ComboBoxItem Content="Per Word" />
+                        </ComboBox>
+                        <ComboBox x:Name="ComboMetronomeTargetMode" Width="160" Header="Target WPM Mode">
+                            <ComboBoxItem Content="Fixed WPM" />
+                            <ComboBoxItem Content="Auto (Avg + 5)" />
+                        </ComboBox>
+                    </StackPanel>
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Target WPM:" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                        <Slider x:Name="SliderMetronomeWpm" Grid.Column="1" Minimum="20" Maximum="120" StepFrequency="5" ValueChanged="MetronomeWpmSlider_Changed" VerticalAlignment="Center" />
+                        <TextBlock x:Name="TxtMetronomeWpm" Grid.Column="2" Text="40 WPM" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" VerticalAlignment="Center" />
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <CheckBox x:Name="ChkMetronomeAudio" Content="Audio tick" />
+                        <CheckBox x:Name="ChkMetronomeVisual" Content="Visual HUD pulse" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
         <!-- Text appearance with Live Animated Preview -->
         <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="8" Padding="14">
             <StackPanel Spacing="10">

@@ -65,6 +65,16 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="BtnMetronome" Click="BtnMetronome_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="7,4" CornerRadius="6" ToolTipService.ToolTip="Toggle Rhythm Metronome" AutomationProperties.Name="Toggle rhythm metronome">
+                        <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                            <Ellipse x:Name="MetronomePulseDot" Width="7" Height="7" Fill="{ThemeResource ForgePurpleBrush}" Opacity="0.35" VerticalAlignment="Center">
+                                <Ellipse.OpacityTransition>
+                                    <ScalarTransition Duration="0:0:0.14" />
+                                </Ellipse.OpacityTransition>
+                            </Ellipse>
+                            <TextBlock x:Name="LblMetronome" Text="Metronome" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                     <Button Click="BtnRestartTest_Click" AllowFocusOnInteraction="False" Background="Transparent" BorderThickness="0" Padding="7" CornerRadius="6" ToolTipService.ToolTip="New test (Tab)" AutomationProperties.Name="Restart test">
                         <FontIcon Glyph="&#xE72C;" FontSize="14" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     </Button>

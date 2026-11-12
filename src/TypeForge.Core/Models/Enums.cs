@@ -252,3 +252,23 @@ public enum FingerGuideMode
     /// <summary>Hidden unless explicitly triggered by repeated strict-mode misses.</summary>
     Off = 2
 }
+
+/// <summary>Selects how often the rhythm metronome beats during typing.</summary>
+public enum MetronomeBeatMode
+{
+    /// <summary>Ticks once per target character (<c>12000 / WPM</c> ms).</summary>
+    PerKeystroke = 0,
+
+    /// <summary>Ticks once per 5-character word (<c>60000 / WPM</c> ms).</summary>
+    PerWord = 1
+}
+
+/// <summary>Selects how the rhythm metronome chooses its target WPM.</summary>
+public enum MetronomeTargetMode
+{
+    /// <summary>Uses the user-configured fixed target WPM.</summary>
+    Fixed = 0,
+
+    /// <summary>Targets the user's personal average Net WPM + 5 WPM (falling back to Fixed when no sessions exist).</summary>
+    Auto = 1
+}

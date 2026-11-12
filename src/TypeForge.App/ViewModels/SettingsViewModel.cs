@@ -352,6 +352,96 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    public bool MetronomeEnabled
+    {
+        get => _state.Settings.MetronomeEnabled;
+        set
+        {
+            if (_state.Settings.MetronomeEnabled != value)
+            {
+                _state.Settings.MetronomeEnabled = value;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public int MetronomeBeatModeIndex
+    {
+        get => (int)_state.Settings.MetronomeBeatMode;
+        set
+        {
+            var next = (MetronomeBeatMode)Math.Clamp(value, 0, 1);
+            if (_state.Settings.MetronomeBeatMode != next)
+            {
+                _state.Settings.MetronomeBeatMode = next;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public int MetronomeTargetModeIndex
+    {
+        get => (int)_state.Settings.MetronomeTargetMode;
+        set
+        {
+            var next = (MetronomeTargetMode)Math.Clamp(value, 0, 1);
+            if (_state.Settings.MetronomeTargetMode != next)
+            {
+                _state.Settings.MetronomeTargetMode = next;
+                _state.SaveSettings();
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsFixedMetronomeSelected));
+            }
+        }
+    }
+
+    public bool IsFixedMetronomeSelected => _state.Settings.MetronomeTargetMode == MetronomeTargetMode.Fixed;
+
+    public int MetronomeTargetWpm
+    {
+        get => _state.Settings.MetronomeTargetWpm;
+        set
+        {
+            int clamped = Math.Clamp(value, UserSettings.MinMetronomeWpm, UserSettings.MaxMetronomeWpm);
+            if (_state.Settings.MetronomeTargetWpm != clamped)
+            {
+                _state.Settings.MetronomeTargetWpm = clamped;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool MetronomeAudioEnabled
+    {
+        get => _state.Settings.MetronomeAudioEnabled;
+        set
+        {
+            if (_state.Settings.MetronomeAudioEnabled != value)
+            {
+                _state.Settings.MetronomeAudioEnabled = value;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool MetronomeVisualEnabled
+    {
+        get => _state.Settings.MetronomeVisualEnabled;
+        set
+        {
+            if (_state.Settings.MetronomeVisualEnabled != value)
+            {
+                _state.Settings.MetronomeVisualEnabled = value;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
     [RelayCommand]
     private void RetakePlacementTest()
     {

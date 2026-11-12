@@ -54,6 +54,16 @@ public sealed partial class TypingSettingsControl : UserControl
             SliderPaceTargetWpm.Value = paceWpm;
             TxtPaceTargetWpm.Text = $"{paceWpm} WPM";
 
+            ChkMetronomeEnabled.IsChecked = settings.MetronomeEnabled;
+            MetronomeDetailsPanel.Visibility = settings.MetronomeEnabled ? Visibility.Visible : Visibility.Collapsed;
+            ComboMetronomeBeat.SelectedIndex = (int)settings.MetronomeBeatMode;
+            ComboMetronomeTargetMode.SelectedIndex = (int)settings.MetronomeTargetMode;
+            int metWpm = Math.Clamp(settings.MetronomeTargetWpm, UserSettings.MinMetronomeWpm, UserSettings.MaxMetronomeWpm);
+            SliderMetronomeWpm.Value = metWpm;
+            TxtMetronomeWpm.Text = $"{metWpm} WPM";
+            ChkMetronomeAudio.IsChecked = settings.MetronomeAudioEnabled;
+            ChkMetronomeVisual.IsChecked = settings.MetronomeVisualEnabled;
+
             int fontIdx = 0;
             for (int i = 0; i < TypingStreamView.AvailableFonts.Count; i++)
             {
@@ -110,6 +120,12 @@ public sealed partial class TypingSettingsControl : UserControl
         settings.SpaceSkipsWords = ChkSpaceSkipsWords.IsChecked == true;
         settings.PaceCaretMode = GetSelectedPaceCaretMode();
         settings.PaceTargetWpm = Math.Clamp((int)Math.Round(SliderPaceTargetWpm.Value), UserSettings.MinPaceTargetWpm, UserSettings.MaxPaceTargetWpm);
+        settings.MetronomeEnabled = ChkMetronomeEnabled.IsChecked == true;
+        settings.MetronomeBeatMode = (MetronomeBeatMode)Math.Clamp(ComboMetronomeBeat.SelectedIndex, 0, 1);
+        settings.MetronomeTargetMode = (MetronomeTargetMode)Math.Clamp(ComboMetronomeTargetMode.SelectedIndex, 0, 1);
+        settings.MetronomeTargetWpm = Math.Clamp((int)Math.Round(SliderMetronomeWpm.Value), UserSettings.MinMetronomeWpm, UserSettings.MaxMetronomeWpm);
+        settings.MetronomeAudioEnabled = ChkMetronomeAudio.IsChecked == true;
+        settings.MetronomeVisualEnabled = ChkMetronomeVisual.IsChecked == true;
 
         int fontIdx = Math.Clamp(ComboFont.SelectedIndex, 0, TypingStreamView.AvailableFonts.Count - 1);
         settings.TypingFontSelection = TypingStreamView.AvailableFonts[fontIdx];
@@ -326,6 +342,27 @@ public sealed partial class TypingSettingsControl : UserControl
         {
             int wpm = Math.Clamp((int)Math.Round(e.NewValue), UserSettings.MinPaceTargetWpm, UserSettings.MaxPaceTargetWpm);
             TxtPaceTargetWpm.Text = $"{wpm} WPM";
+        }
+    }
+
+    private void MetronomeOption_Changed(object sender, RoutedEventArgs e)
+    {
+        if (MetronomeDetailsPanel is null || ChkMetronomeEnabled is null)
+        {
+            return;
+        }
+
+        MetronomeDetailsPanel.Visibility = ChkMetronomeEnabled.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void MetronomeWpmSlider_Changed(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (TxtMetronomeWpm is not null)
+        {
+            int wpm = Math.Clamp((int)Math.Round(e.NewValue), UserSettings.MinMetronomeWpm, UserSettings.MaxMetronomeWpm);
+            TxtMetronomeWpm.Text = $"{wpm} WPM";
         }
     }
 }

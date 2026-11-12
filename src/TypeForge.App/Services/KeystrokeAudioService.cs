@@ -12,6 +12,7 @@ public interface IKeystrokeAudioService : IDisposable
     void Preview(SoundTheme theme, int volumePercent);
     void PlayClick();
     void PlayMistake();
+    void PlayMetronomeTick();
 }
 
 /// <summary>
@@ -30,8 +31,10 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
 
     private byte[] _clickPcm = [];
     private byte[] _mistakePcm = [];
+    private byte[] _metronomePcm = [];
     private GCHandle _clickHandle;
     private GCHandle _mistakeHandle;
+    private GCHandle _metronomeHandle;
 
     private SoundFeedbackMode _mode = SoundFeedbackMode.All;
     private SoundTheme _theme = SoundTheme.Default;
@@ -117,6 +120,19 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
             }
 
             PlayBufferLocked(_mistakeHandle, _mistakePcm.Length);
+        }
+    }
+
+    public void PlayMetronomeTick()
+    {
+        lock (_lock)
+        {
+            if (_mode == SoundFeedbackMode.None || _volumePercent <= 0)
+            {
+                return;
+            }
+
+            PlayBufferLocked(_metronomeHandle, _metronomePcm.Length);
         }
     }
 
@@ -234,8 +250,11 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
         FreeHandles();
         _clickPcm = BuildClickForTheme(theme, volumePercent);
         _mistakePcm = BuildMistakeForTheme(theme, volumePercent);
+        double scale = Math.Clamp(volumePercent / 100.0, 0.0, 1.0);
+        _metronomePcm = BuildPcmSamples(24, 1520, 620, 0.38 * scale, isClick: true);
         _clickHandle = GCHandle.Alloc(_clickPcm, GCHandleType.Pinned);
         _mistakeHandle = GCHandle.Alloc(_mistakePcm, GCHandleType.Pinned);
+        _metronomeHandle = GCHandle.Alloc(_metronomePcm, GCHandleType.Pinned);
     }
 
     private static byte[] BuildClickForTheme(SoundTheme theme, int volumePercent)
@@ -305,6 +324,11 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
         if (_mistakeHandle.IsAllocated)
         {
             _mistakeHandle.Free();
+        }
+
+        if (_metronomeHandle.IsAllocated)
+        {
+            _metronomeHandle.Free();
         }
     }
 
