@@ -4,6 +4,22 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-12
+
+### Added
+- Velopack bootstrap in `Program.cs` (`DISABLE_XAML_GENERATED_MAIN`) and dynamic `VERSION` injection in `TypeForge.App.csproj`. (812320d)
+- `UpdateService` (`IUpdateService`) checking GitHub Releases via Velopack (`GithubSource`) for installed builds and trim-safe `JsonDocument` checks for portable/dev builds, plus fetching `release_notes.md`. (812320d)
+- Silent launch-time update check for installed apps with clickable top-bar `Update v...` pill in `MainWindow` and `Updates & What's New` card in `SettingsPage` / `SettingsViewModel`. (812320d)
+
+### Changed
+- Updated `release.yml` to run automatically on pushes to `main` (skipping `[skip ci]`) and chain a `windows-latest` `publish-installer` job producing `TypeForgeApp-win-Setup.exe`, `TypeForgeApp-win-Portable.zip`, `.nupkg` delta/full packages, and `releases.win.json`. (812320d)
+- Updated `winui3-release.yml` with explicit `--runtime win-x64` Velopack packaging for manual dispatches. (812320d)
+- update version.json for WinUI3 release v0.1.0 [skip ci] (baab131)
+- point version.json at release v0.1.0 [skip ci] (4649225)
+
+### Fixed
+- gate publish-installer on new_version output and trigger auto-release (4294a71)
+
 ## [0.1.0] - 2026-11-11
 
 ### Added
