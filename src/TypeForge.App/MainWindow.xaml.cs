@@ -63,24 +63,22 @@ public sealed partial class MainWindow : Window
 
         RootGrid.Loaded += (_, _) => AlignTopBarRightInset();
         RootGrid.ActualThemeChanged += (_, _) => UpdateRouteStyles();
-        _updateService.UpdateStatusChanged += outcome =>
-            DispatcherQueue.TryEnqueue(() => ApplyUpdateBadge(outcome));
+        _updateService.StateChanged += (_, _) =>
+            DispatcherQueue.TryEnqueue(ApplyUpdateBadge);
 
-        if (_updateService.LastOutcome is { } cachedOutcome)
-        {
-            ApplyUpdateBadge(cachedOutcome);
-        }
+        ApplyUpdateBadge();
 
         _navigation.NavigateTo("practice");
     }
 
-    private void ApplyUpdateBadge(AppUpdateCheckOutcome outcome)
+    private void ApplyUpdateBadge()
     {
-        bool available = outcome.Status is UpdateCheckStatus.UpdateAvailable or UpdateCheckStatus.InstallerUpdateAvailable;
+        bool available = _updateService.State == UpdateState.UpdateAvailable
+            && _updateService.LatestRelease is not null;
         BtnUpdateBadge.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
-        if (available && !string.IsNullOrWhiteSpace(outcome.AvailableVersion))
+        if (available && _updateService.LatestRelease is { } release)
         {
-            LblUpdateBadge.Text = $"Update v{outcome.AvailableVersion}";
+            LblUpdateBadge.Text = $"Update {release.TagName}";
         }
     }
 

@@ -1,283 +1,526 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text.Json;
-using Velopack;
-using Velopack.Sources;
+using System.Text.Json.Serialization;
+using Microsoft.UI.Dispatching;
 
 namespace TypeForge.App.Services;
 
 /// <summary>
-/// Outcome status from checking GitHub Releases for a newer TypeForge build.
+/// Lifecycle states for GitHub Release checking and Inno Setup installation.
 /// </summary>
-public enum UpdateCheckStatus
+public enum UpdateState
 {
-    UpToDate,
+    Idle,
+    Checking,
     UpdateAvailable,
-    InstallerUpdateAvailable,
-    Error
+    UpToDate,
+    Downloading,
+    Downloaded,
+    Failed
 }
 
 /// <summary>
-/// Summary returned by an update check against GitHub Releases.
+/// Metadata for the latest TypeForge GitHub Release and its Windows Setup asset.
 /// </summary>
-public sealed record AppUpdateCheckOutcome(
-    UpdateCheckStatus Status,
-    string CurrentVersion,
-    string? AvailableVersion,
-    string ReleaseNotes,
-    string Message,
-    string ReleaseUrl);
+public sealed record ReleaseInfo(
+    string TagName,
+    Version Version,
+    string Name,
+    string Changelog,
+    string DownloadUrl,
+    long DownloadSize,
+    string HtmlUrl,
+    DateTimeOffset? PublishedAt);
+
+internal sealed class GitHubReleaseAssetDto
+{
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("browser_download_url")]
+    public string? BrowserDownloadUrl { get; set; }
+
+    [JsonPropertyName("size")]
+    public long Size { get; set; }
+}
+
+internal sealed class GitHubReleaseDto
+{
+    [JsonPropertyName("tag_name")]
+    public string? TagName { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("body")]
+    public string? Body { get; set; }
+
+    [JsonPropertyName("html_url")]
+    public string? HtmlUrl { get; set; }
+
+    [JsonPropertyName("published_at")]
+    public DateTimeOffset? PublishedAt { get; set; }
+
+    [JsonPropertyName("assets")]
+    public GitHubReleaseAssetDto[]? Assets { get; set; }
+}
+
+[JsonSerializable(typeof(GitHubReleaseDto))]
+internal sealed partial class UpdateJsonContext : JsonSerializerContext;
 
 /// <summary>
-/// Checks for updates via Velopack / GitHub Releases, fetches What's New notes, and applies updates.
+/// Checks GitHub Releases, downloads the Inno Setup installer with progress, and performs a silent self-update handoff.
 /// </summary>
 public interface IUpdateService
 {
-    string CurrentVersion { get; }
-    bool IsInstalledViaInstaller { get; }
-    bool HasDownloadableUpdate { get; }
+    UpdateState State { get; }
+    ReleaseInfo? LatestRelease { get; }
+    string StatusMessage { get; }
+    double DownloadProgress { get; }
+    string CurrentVersionString { get; }
+    bool IsInstalledCopy { get; }
     string ReleasePageUrl { get; }
-    AppUpdateCheckOutcome? LastOutcome { get; }
 
-    event Action<AppUpdateCheckOutcome>? UpdateStatusChanged;
+    event Action<UpdateState, string>? StateChanged;
+    event Action<double>? DownloadProgressChanged;
 
-    Task<AppUpdateCheckOutcome> CheckForUpdatesAsync(CancellationToken ct = default);
-    Task<bool> DownloadAndApplyUpdateAsync(Action<int>? onProgress = null, CancellationToken ct = default);
+    void StartBackgroundMonitoring(DispatcherQueue dispatcherQueue);
+    void StopBackgroundMonitoring();
+    Task<ReleaseInfo?> CheckForUpdatesAsync(bool silentBackground = false, CancellationToken cancellationToken = default);
+    Task<bool> DownloadAndInstallAsync(CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Concrete updater integrating Velopack delta updates and GitHub release_notes.md retrieval.
+/// Inno Setup + GitHub Releases updater following the LivelyScreen silent installer handoff flow.
 /// </summary>
 public sealed class UpdateService : IUpdateService
 {
-    private const string RepoUrl = "https://github.com/Unknownplanet40/-type-me-up";
-    private const string LatestReleaseApiUrl = "https://api.github.com/repos/Unknownplanet40/-type-me-up/releases/latest";
-    private const string LatestReleaseNotesUrl = "https://github.com/Unknownplanet40/-type-me-up/releases/latest/download/release_notes.md";
-    private const string LatestReleasePageUrl = "https://github.com/Unknownplanet40/-type-me-up/releases/latest";
+    private const string RepoOwner = "Unknownplanet40";
+    private const string RepoName = "-type-me-up";
+    private const string LatestReleaseUrl = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
+    private const string DefaultReleasePageUrl = $"https://github.com/{RepoOwner}/{RepoName}/releases/latest";
 
     private static readonly HttpClient HttpClient = CreateHttpClient();
 
-    private readonly UpdateManager _manager;
-    private UpdateInfo? _pendingUpdate;
+    private DispatcherQueue? _dispatcherQueue;
+    private DispatcherQueueTimer? _startupTimer;
+    private DispatcherQueueTimer? _periodicTimer;
+    private int _isChecking;
 
-    public UpdateService()
-    {
-        _manager = new UpdateManager(new GithubSource(RepoUrl, null, false));
-    }
+    public UpdateState State { get; private set; } = UpdateState.Idle;
+    public ReleaseInfo? LatestRelease { get; private set; }
+    public string StatusMessage { get; private set; } = "Click Check for Updates to check GitHub Releases.";
+    public double DownloadProgress { get; private set; }
+    public string ReleasePageUrl => LatestRelease?.HtmlUrl is { Length: > 0 } url ? url : DefaultReleasePageUrl;
 
-    public bool IsInstalledViaInstaller => _manager.IsInstalled;
-    public bool HasDownloadableUpdate => _pendingUpdate is not null;
-    public string ReleasePageUrl { get; private set; } = LatestReleasePageUrl;
-    public AppUpdateCheckOutcome? LastOutcome { get; private set; }
+    public bool IsInstalledCopy => File.Exists(Path.Combine(AppContext.BaseDirectory, "unins000.exe"));
 
-    public event Action<AppUpdateCheckOutcome>? UpdateStatusChanged;
+    public string CurrentVersionString => GetCurrentVersionString();
 
-    public string CurrentVersion
+    public static Version CurrentVersion
     {
         get
         {
-            if (_manager.IsInstalled && _manager.CurrentVersion is not null)
-            {
-                return _manager.CurrentVersion.ToString();
-            }
-
-            string? infoVersion = Assembly.GetExecutingAssembly()
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-                .InformationalVersion;
-
-            if (!string.IsNullOrWhiteSpace(infoVersion))
-            {
-                return infoVersion.Split('+')[0].Trim();
-            }
-
-            return Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
+            return ParseVersion(GetCurrentVersionString())
+                ?? Assembly.GetExecutingAssembly().GetName().Version
+                ?? new Version(0, 1, 0);
         }
     }
 
-    public async Task<AppUpdateCheckOutcome> CheckForUpdatesAsync(CancellationToken ct = default)
+    public event Action<UpdateState, string>? StateChanged;
+    public event Action<double>? DownloadProgressChanged;
+
+    public void StartBackgroundMonitoring(DispatcherQueue dispatcherQueue)
     {
-        AppUpdateCheckOutcome outcome = await CheckForUpdatesCoreAsync(ct).ConfigureAwait(false);
-        LastOutcome = outcome;
-        UpdateStatusChanged?.Invoke(outcome);
-        return outcome;
-    }
-
-    private async Task<AppUpdateCheckOutcome> CheckForUpdatesCoreAsync(CancellationToken ct)
-    {
-        string current = CurrentVersion;
-        _pendingUpdate = null;
-        ReleasePageUrl = LatestReleasePageUrl;
-
-        string releaseNotes = await FetchLatestReleaseNotesAsync(ct).ConfigureAwait(false);
-
-        if (_manager.IsInstalled)
+        _dispatcherQueue = dispatcherQueue;
+        if (_startupTimer is not null)
         {
-            try
-            {
-                UpdateInfo? update = await _manager.CheckForUpdatesAsync().ConfigureAwait(false);
-                if (update is null)
-                {
-                    return new AppUpdateCheckOutcome(
-                        UpdateCheckStatus.UpToDate,
-                        current,
-                        null,
-                        releaseNotes,
-                        $"You are up to date on TypeForge v{current}.",
-                        LatestReleasePageUrl);
-                }
-
-                _pendingUpdate = update;
-                string targetVersion = update.TargetFullRelease.Version.ToString();
-                string notes = !string.IsNullOrWhiteSpace(releaseNotes)
-                    ? releaseNotes
-                    : update.TargetFullRelease.NotesMarkdown ?? string.Empty;
-
-                return new AppUpdateCheckOutcome(
-                    UpdateCheckStatus.UpdateAvailable,
-                    current,
-                    targetVersion,
-                    notes.Trim(),
-                    $"Update v{targetVersion} is ready to download and install.",
-                    LatestReleasePageUrl);
-            }
-            catch (Exception ex)
-            {
-                return new AppUpdateCheckOutcome(
-                    UpdateCheckStatus.Error,
-                    current,
-                    null,
-                    releaseNotes,
-                    $"Could not check updates: {ex.Message}",
-                    LatestReleasePageUrl);
-            }
+            return;
         }
 
-        // Portable / development run: query GitHub Releases metadata cleanly without reflection.
+        _startupTimer = dispatcherQueue.CreateTimer();
+        _startupTimer.Interval = TimeSpan.FromSeconds(12);
+        _startupTimer.IsRepeating = false;
+        _startupTimer.Tick += async (_, _) =>
+        {
+            _startupTimer?.Stop();
+            await CheckForUpdatesAsync(silentBackground: true);
+        };
+        _startupTimer.Start();
+
+        _periodicTimer = dispatcherQueue.CreateTimer();
+        _periodicTimer.Interval = TimeSpan.FromHours(24);
+        _periodicTimer.IsRepeating = true;
+        _periodicTimer.Tick += async (_, _) => await CheckForUpdatesAsync(silentBackground: true);
+        _periodicTimer.Start();
+    }
+
+    public void StopBackgroundMonitoring()
+    {
+        _startupTimer?.Stop();
+        _periodicTimer?.Stop();
+    }
+
+    public async Task<ReleaseInfo?> CheckForUpdatesAsync(bool silentBackground = false, CancellationToken cancellationToken = default)
+    {
+        if (Interlocked.Exchange(ref _isChecking, 1) == 1)
+        {
+            return LatestRelease;
+        }
+
         try
         {
-            using HttpRequestMessage request = new(HttpMethod.Get, LatestReleaseApiUrl);
-            using HttpResponseMessage response = await HttpClient.SendAsync(request, ct).ConfigureAwait(false);
+            if (!silentBackground)
+            {
+                SetState(UpdateState.Checking, "Checking GitHub Releases for updates...");
+            }
+
+            using HttpResponseMessage response = await HttpClient.GetAsync(LatestReleaseUrl, cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
-                return new AppUpdateCheckOutcome(
-                    UpdateCheckStatus.Error,
-                    current,
-                    null,
-                    releaseNotes,
-                    $"GitHub Releases returned HTTP {(int)response.StatusCode}.",
-                    LatestReleasePageUrl);
-            }
-
-            string json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            using JsonDocument doc = JsonDocument.Parse(json);
-            JsonElement root = doc.RootElement;
-
-            string tag = root.TryGetProperty("tag_name", out JsonElement tagEl)
-                ? (tagEl.GetString() ?? string.Empty)
-                : string.Empty;
-
-            if (root.TryGetProperty("html_url", out JsonElement urlEl) && !string.IsNullOrWhiteSpace(urlEl.GetString()))
-            {
-                ReleasePageUrl = urlEl.GetString()!;
-            }
-
-            if (root.TryGetProperty("assets", out JsonElement assetsEl) && assetsEl.ValueKind == JsonValueKind.Array)
-            {
-                foreach (JsonElement asset in assetsEl.EnumerateArray())
+                string error = response.StatusCode == System.Net.HttpStatusCode.NotFound
+                    ? "No public GitHub release found (HTTP 404 — repository may be private or have no published release)."
+                    : $"Update check failed (HTTP {(int)response.StatusCode}).";
+                if (!silentBackground)
                 {
-                    string name = asset.TryGetProperty("name", out JsonElement nameEl)
-                        ? (nameEl.GetString() ?? string.Empty)
-                        : string.Empty;
-                    if (name.EndsWith("Setup.exe", StringComparison.OrdinalIgnoreCase)
-                        && asset.TryGetProperty("browser_download_url", out JsonElement dlEl)
-                        && !string.IsNullOrWhiteSpace(dlEl.GetString()))
-                    {
-                        ReleasePageUrl = dlEl.GetString()!;
-                        break;
-                    }
+                    SetState(UpdateState.Failed, error);
                 }
+
+                return null;
             }
 
-            string normalizedLatest = tag.TrimStart('v', 'V').Trim();
-            if (Version.TryParse(NormalizeSemVer(normalizedLatest), out Version? latestVer)
-                && Version.TryParse(NormalizeSemVer(current), out Version? currentVer)
-                && latestVer > currentVer)
+            string json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            GitHubReleaseDto? dto = JsonSerializer.Deserialize(json, UpdateJsonContext.Default.GitHubReleaseDto);
+            if (dto is null || string.IsNullOrWhiteSpace(dto.TagName))
             {
-                return new AppUpdateCheckOutcome(
-                    UpdateCheckStatus.InstallerUpdateAvailable,
-                    current,
-                    normalizedLatest,
-                    releaseNotes,
-                    $"TypeForge v{normalizedLatest} is available. Download the Windows Setup installer to upgrade.",
-                    ReleasePageUrl);
+                if (!silentBackground)
+                {
+                    SetState(UpdateState.Failed, "Invalid release metadata returned by GitHub.");
+                }
+
+                return null;
             }
 
-            return new AppUpdateCheckOutcome(
-                UpdateCheckStatus.UpToDate,
-                current,
-                string.IsNullOrWhiteSpace(normalizedLatest) ? null : normalizedLatest,
-                releaseNotes,
-                $"You are up to date on TypeForge v{current}. Install via TypeForge Setup for 1-click auto-updates.",
-                ReleasePageUrl);
+            Version? latestVersion = ParseVersion(dto.TagName);
+            if (latestVersion is null)
+            {
+                if (!silentBackground)
+                {
+                    SetState(UpdateState.Failed, $"Unrecognized version tag: {dto.TagName}");
+                }
+
+                return null;
+            }
+
+            GitHubReleaseAssetDto? installerAsset = FindInstallerAsset(dto.Assets);
+            string changelog = await ResolveReleaseNotesAsync(dto, cancellationToken).ConfigureAwait(false);
+
+            var info = new ReleaseInfo(
+                dto.TagName,
+                latestVersion,
+                string.IsNullOrWhiteSpace(dto.Name) ? dto.TagName : dto.Name,
+                changelog,
+                installerAsset?.BrowserDownloadUrl ?? string.Empty,
+                installerAsset?.Size ?? 0,
+                dto.HtmlUrl ?? DefaultReleasePageUrl,
+                dto.PublishedAt);
+
+            LatestRelease = info;
+
+            if (IsNewerVersion(latestVersion, CurrentVersion))
+            {
+                SetState(UpdateState.UpdateAvailable, $"Update available: {info.TagName} (Current: v{CurrentVersionString})");
+                return info;
+            }
+
+            if (!silentBackground)
+            {
+                SetState(UpdateState.UpToDate, $"You are up to date on TypeForge v{CurrentVersionString}.");
+            }
+            else if (State == UpdateState.Idle)
+            {
+                StatusMessage = $"You are up to date on TypeForge v{CurrentVersionString}.";
+            }
+
+            return info;
+        }
+        catch (OperationCanceledException)
+        {
+            if (!silentBackground)
+            {
+                SetState(UpdateState.Idle, "Update check cancelled.");
+            }
+
+            return null;
         }
         catch (Exception ex)
         {
-            return new AppUpdateCheckOutcome(
-                UpdateCheckStatus.Error,
-                current,
-                null,
-                releaseNotes,
-                $"Unable to check GitHub Releases offline or right now: {ex.Message}",
-                LatestReleasePageUrl);
+            if (!silentBackground)
+            {
+                SetState(UpdateState.Failed, $"Could not check updates: {ex.Message}");
+            }
+
+            return null;
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isChecking, 0);
         }
     }
 
-    public async Task<bool> DownloadAndApplyUpdateAsync(Action<int>? onProgress = null, CancellationToken ct = default)
+    public async Task<bool> DownloadAndInstallAsync(CancellationToken cancellationToken = default)
     {
-        if (!_manager.IsInstalled || _pendingUpdate is null)
+        if (LatestRelease is null || string.IsNullOrWhiteSpace(LatestRelease.DownloadUrl))
         {
+            SetState(UpdateState.Failed, "No Windows Setup installer asset was found on the latest GitHub release.");
             return false;
         }
 
-        await _manager.DownloadUpdatesAsync(_pendingUpdate, p => onProgress?.Invoke(p), ct).ConfigureAwait(false);
-        _manager.ApplyUpdatesAndRestart(_pendingUpdate);
-        return true;
-    }
-
-    private static async Task<string> FetchLatestReleaseNotesAsync(CancellationToken ct)
-    {
         try
         {
-            using HttpResponseMessage response = await HttpClient.GetAsync(LatestReleaseNotesUrl, ct).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            DownloadProgress = 0;
+            ReportProgress(0);
+            SetState(UpdateState.Downloading, $"Downloading {LatestRelease.TagName} installer...");
+
+            string tempDir = Path.Combine(Path.GetTempPath(), "TypeForgeUpdates");
+            Directory.CreateDirectory(tempDir);
+
+            string fileName = Path.GetFileName(new Uri(LatestRelease.DownloadUrl).LocalPath);
+            if (string.IsNullOrWhiteSpace(fileName) || !fileName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
             {
-                return string.Empty;
+                fileName = $"TypeForge-Setup-{LatestRelease.TagName}.exe";
             }
 
-            string text = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            return text.Trim();
+            string installerPath = Path.Combine(tempDir, fileName);
+            if (File.Exists(installerPath))
+            {
+                File.Delete(installerPath);
+            }
+
+            using (HttpResponseMessage response = await HttpClient
+                .GetAsync(LatestRelease.DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                .ConfigureAwait(false))
+            {
+                response.EnsureSuccessStatusCode();
+                long totalBytes = response.Content.Headers.ContentLength ?? LatestRelease.DownloadSize;
+
+                await using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                await using var fs = new FileStream(installerPath, FileMode.Create, FileAccess.Write, FileShare.None, 81920, useAsync: true);
+
+                var buffer = new byte[81920];
+                long totalRead = 0;
+                int bytesRead;
+
+                while ((bytesRead = await stream.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+                {
+                    await fs.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken).ConfigureAwait(false);
+                    totalRead += bytesRead;
+
+                    if (totalBytes > 0)
+                    {
+                        double progress = Math.Clamp((double)totalRead / totalBytes, 0, 1);
+                        DownloadProgress = progress;
+                        ReportProgress(progress);
+                    }
+                }
+
+                await fs.FlushAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            DownloadProgress = 1;
+            ReportProgress(1);
+            SetState(UpdateState.Downloaded, "Download complete. Launching silent installer...");
+            InstallSilentAndRestart(installerPath);
+            return true;
         }
-        catch
+        catch (OperationCanceledException)
         {
-            return string.Empty;
+            SetState(UpdateState.Idle, "Download cancelled.");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            SetState(UpdateState.Failed, $"Download failed: {ex.Message}");
+            return false;
         }
     }
 
-    private static string NormalizeSemVer(string raw)
+    public static void InstallSilentAndRestart(string installerPath)
     {
-        string core = raw.Split('-')[0].Trim();
-        return core.Count(c => c == '.') switch
+        if (!File.Exists(installerPath))
         {
-            0 when int.TryParse(core, out _) => $"{core}.0.0",
-            1 => $"{core}.0",
-            _ => core
+            throw new FileNotFoundException("Downloaded installer could not be found.", installerPath);
+        }
+
+        string? currentExe = Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName;
+        string? restartExe = ResolveRestartExecutablePath(currentExe);
+
+        string arguments = string.IsNullOrWhiteSpace(restartExe)
+            ? $"/c ping 127.0.0.1 -n 3 > nul & \"{installerPath}\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART"
+            : $"/c ping 127.0.0.1 -n 3 > nul & \"{installerPath}\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART & start \"\" \"{restartExe}\"";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "cmd.exe",
+            Arguments = arguments,
+            CreateNoWindow = true,
+            UseShellExecute = false
         };
+
+        Process.Start(psi);
+        Environment.Exit(0);
+    }
+
+    public static Version? ParseVersion(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag))
+        {
+            return null;
+        }
+
+        string clean = tag.Trim().TrimStart('v', 'V').Split('-')[0].Trim();
+        if (Version.TryParse(clean, out Version? parsed))
+        {
+            return NormalizeThreePart(parsed);
+        }
+
+        string[] parts = clean.Split('.', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1 && int.TryParse(parts[0], out int major))
+        {
+            return new Version(major, 0, 0);
+        }
+
+        return null;
+    }
+
+    private static bool IsNewerVersion(Version candidate, Version current)
+    {
+        return NormalizeThreePart(candidate) > NormalizeThreePart(current);
+    }
+
+    private static Version NormalizeThreePart(Version version)
+    {
+        int major = Math.Max(0, version.Major);
+        int minor = Math.Max(0, version.Minor);
+        int build = Math.Max(0, version.Build);
+        return new Version(major, minor, build);
+    }
+
+    private static GitHubReleaseAssetDto? FindInstallerAsset(GitHubReleaseAssetDto[]? assets)
+    {
+        if (assets is null || assets.Length == 0)
+        {
+            return null;
+        }
+
+        return assets.FirstOrDefault(a =>
+                !string.IsNullOrWhiteSpace(a.Name)
+                && a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                && a.Name.Contains("Setup", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(a.BrowserDownloadUrl))
+            ?? assets.FirstOrDefault(a =>
+                !string.IsNullOrWhiteSpace(a.Name)
+                && a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(a.BrowserDownloadUrl));
+    }
+
+    private static async Task<string> ResolveReleaseNotesAsync(GitHubReleaseDto dto, CancellationToken cancellationToken)
+    {
+        GitHubReleaseAssetDto? notesAsset = dto.Assets?.FirstOrDefault(a =>
+            string.Equals(a.Name, "release_notes.md", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(a.BrowserDownloadUrl));
+
+        if (notesAsset?.BrowserDownloadUrl is { Length: > 0 } url)
+        {
+            try
+            {
+                using HttpResponseMessage response = await HttpClient.GetAsync(url, cancellationToken).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                {
+                    string markdown = (await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false)).Trim();
+                    if (!string.IsNullOrWhiteSpace(markdown))
+                    {
+                        return markdown;
+                    }
+                }
+            }
+            catch
+            {
+                // Fall back to the release body if downloading release_notes.md fails.
+            }
+        }
+
+        return dto.Body?.Trim() ?? string.Empty;
+    }
+
+    private static string? ResolveRestartExecutablePath(string? currentExe)
+    {
+        if (string.IsNullOrWhiteSpace(currentExe))
+        {
+            return null;
+        }
+
+        // Dev build output isn't overwritten by Inno Setup; launch the installed executable instead.
+        if (currentExe.Contains(@"\bin\Debug\", StringComparison.OrdinalIgnoreCase)
+            || currentExe.Contains(@"\bin\Release\", StringComparison.OrdinalIgnoreCase))
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Programs",
+                "TypeForge",
+                "TypeForge.App.exe");
+        }
+
+        return currentExe;
+    }
+
+    private static string GetCurrentVersionString()
+    {
+        string? infoVersion = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(infoVersion))
+        {
+            return infoVersion.Split('+')[0].Trim();
+        }
+
+        return Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.1.0";
+    }
+
+    private void SetState(UpdateState state, string message)
+    {
+        State = state;
+        StatusMessage = message;
+        if (_dispatcherQueue is not null)
+        {
+            _dispatcherQueue.TryEnqueue(() => StateChanged?.Invoke(state, message));
+        }
+        else
+        {
+            StateChanged?.Invoke(state, message);
+        }
+    }
+
+    private void ReportProgress(double progress)
+    {
+        if (_dispatcherQueue is not null)
+        {
+            _dispatcherQueue.TryEnqueue(() => DownloadProgressChanged?.Invoke(progress));
+        }
+        else
+        {
+            DownloadProgressChanged?.Invoke(progress);
+        }
     }
 
     private static HttpClient CreateHttpClient()
     {
-        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("TypeForge", "1.0"));
+        var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
+        string version = GetCurrentVersionString();
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("TypeForge-WinUI-Updater", version));
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         return client;
     }

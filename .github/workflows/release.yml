@@ -172,7 +172,7 @@ jobs:
             "name": "${{ github.event.repository.name }}",
             "version": "${NEW_VERSION}",
             "channel": "stable",
-            "download_url": "https://github.com/${{ github.repository }}/releases/download/v${NEW_VERSION}/TypeForgeApp-win-Setup.exe"
+            "download_url": "https://github.com/${{ github.repository }}/releases/download/v${NEW_VERSION}/TypeForge-Setup-win-x64.exe"
           }
           EOF
           git add version.json
@@ -213,9 +213,6 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Install Velopack CLI
-        run: dotnet tool install -g vpk
-
       - name: Restore & Test Core
         run: |
           dotnet restore TypeForge.sln
@@ -223,49 +220,26 @@ jobs:
 
       - name: Publish Self-Contained WinUI3 App (win-x64)
         run: |
-          dotnet publish src/TypeForge.App/TypeForge.App.csproj -c Release -r win-x64 -p:Platform=x64 --self-contained true -o dist/TypeForge-win-x64
+          dotnet publish src/TypeForge.App/TypeForge.App.csproj -c Release -p:PublishProfile=win-x64
 
-      - name: Download Prior Velopack Releases for Delta Generation
-        shell: bash
+      - name: Package Portable ZIP
+        shell: pwsh
         run: |
-          mkdir -p bin/Dist
-          vpk download github --repoUrl "https://github.com/${{ github.repository }}" --outputDir "bin/Dist" || true
+          $publishPath = "src/TypeForge.App/bin/Release/net8.0-windows10.0.26100.0/win-x64/publish"
+          Compress-Archive -Path "$publishPath/*" -DestinationPath "TypeForge-win-x64.zip" -Force
 
-      - name: Package Windows Setup Installer & Delta Feed (Velopack)
+      - name: Build Inno Setup Installer
         shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ needs.release.outputs.new_version }}
         run: |
-          New-Item -ItemType Directory -Force -Path bin/Dist | Out-Null
-          gh release download "v$env:NEW_VERSION" --pattern "release_notes.md" --clobber 2>$null
-          $packArgs = @(
-            'pack',
-            '--packId', 'TypeForgeApp',
-            '--packTitle', 'TypeForge',
-            '--packAuthors', 'TypeForge',
-            '--packVersion', $env:NEW_VERSION,
-            '--runtime', 'win-x64',
-            '--packDir', 'dist/TypeForge-win-x64',
-            '--mainExe', 'TypeForge.App.exe',
-            '--icon', 'src/TypeForge.App/Assets/AppIcon.ico',
-            '--splashProgressColor', '#A78BFA',
-            '--outputDir', 'bin/Dist'
-          )
-          if (Test-Path 'release_notes.md') {
-            $packArgs += @('--releaseNotes', 'release_notes.md')
-          }
-          vpk @packArgs
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$env:NEW_VERSION" installer/TypeForge.iss
 
-      - name: Upload Installer & Update Feed to GitHub Release
+      - name: Upload Installer & Portable ZIP to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ needs.release.outputs.new_version }}
         shell: bash
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          ASSETS=(bin/Dist/*)
-          if [ ${#ASSETS[@]} -gt 0 ]; then
-            gh release upload "v${NEW_VERSION}" "${ASSETS[@]}" --clobber
-          fi
+          gh release upload "v${NEW_VERSION}" "installer/TypeForge-Setup-win-x64.exe" "TypeForge-win-x64.zip" --clobber

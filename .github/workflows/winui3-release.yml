@@ -32,9 +32,6 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Install Velopack CLI
-        run: dotnet tool install -g vpk
-
       - name: Restore
         run: dotnet restore TypeForge.sln
 
@@ -43,38 +40,21 @@ jobs:
 
       - name: Publish Self-Contained WinUI3 App (win-x64)
         run: |
-          dotnet publish src/TypeForge.App/TypeForge.App.csproj -c Release -r win-x64 -p:Platform=x64 --self-contained true -o dist/TypeForge-win-x64
+          dotnet publish src/TypeForge.App/TypeForge.App.csproj -c Release -p:PublishProfile=win-x64
 
-      - name: Download Prior Velopack Releases for Delta Generation
-        shell: bash
+      - name: Package Portable ZIP
+        shell: pwsh
         run: |
-          mkdir -p bin/Dist
-          vpk download github --repoUrl "https://github.com/${{ github.repository }}" --outputDir "bin/Dist" || true
+          $publishPath = "src/TypeForge.App/bin/Release/net8.0-windows10.0.26100.0/win-x64/publish"
+          Compress-Archive -Path "$publishPath/*" -DestinationPath "TypeForge-win-x64.zip" -Force
 
-      - name: Package Windows Setup Installer & Delta Feed (Velopack)
+      - name: Build Inno Setup Installer
         shell: pwsh
         run: |
           $version = Get-Content VERSION -Raw | ForEach-Object { $_.Trim() }
-          New-Item -ItemType Directory -Force -Path bin/Dist | Out-Null
-          $packArgs = @(
-            'pack',
-            '--packId', 'TypeForgeApp',
-            '--packTitle', 'TypeForge',
-            '--packAuthors', 'TypeForge',
-            '--packVersion', $version,
-            '--runtime', 'win-x64',
-            '--packDir', 'dist/TypeForge-win-x64',
-            '--mainExe', 'TypeForge.App.exe',
-            '--icon', 'src/TypeForge.App/Assets/AppIcon.ico',
-            '--splashProgressColor', '#A78BFA',
-            '--outputDir', 'bin/Dist'
-          )
-          if (Test-Path 'release_notes.md') {
-            $packArgs += @('--releaseNotes', 'release_notes.md')
-          }
-          vpk @packArgs
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$version" installer/TypeForge.iss
 
-      - name: Ensure GitHub Release Exists and Upload Installer + Update Assets
+      - name: Ensure GitHub Release Exists and Upload Installer + Portable ZIP
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -84,18 +64,14 @@ jobs:
           if ! gh release view "v${VERSION}" >/dev/null 2>&1; then
             gh release create "v${VERSION}" --title "${{ github.event.repository.name }} v${VERSION}" --generate-notes
           fi
-          shopt -s nullglob
-          ASSETS=(bin/Dist/*)
-          if [ ${#ASSETS[@]} -gt 0 ]; then
-            gh release upload "v${VERSION}" "${ASSETS[@]}" --clobber
-          fi
+          gh release upload "v${VERSION}" "installer/TypeForge-Setup-win-x64.exe" "TypeForge-win-x64.zip" --clobber
 
       - name: Update version.json
         shell: bash
         run: |
           set -euo pipefail
           VERSION=$(cat VERSION | tr -d '[:space:]')
-          SETUP_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/TypeForgeApp-win-Setup.exe"
+          SETUP_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/TypeForge-Setup-win-x64.exe"
           cat > version.json <<EOF
           {
             "name": "${{ github.event.repository.name }}",
@@ -113,13 +89,11 @@ jobs:
         if: failure()
         shell: pwsh
         run: |
-          Write-Host "=== Dist ==="
-          Get-ChildItem "bin/Dist" -Recurse -File -ErrorAction SilentlyContinue | Select-Object FullName, Length
-          Write-Host "=== VERSION ==="
+          Get-ChildItem "installer" -File -ErrorAction SilentlyContinue | Select-Object FullName, Length
           Get-Content VERSION -ErrorAction SilentlyContinue
       - name: Upload debug artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: winui3-debug
-          path: bin/Dist/
+          path: installer/

@@ -62,10 +62,7 @@ public partial class App : Application
         _window.Activate();
 
         IUpdateService updateService = Services.GetRequiredService<IUpdateService>();
-        if (updateService.IsInstalledViaInstaller)
-        {
-            _ = Task.Run(() => updateService.CheckForUpdatesAsync());
-        }
+        updateService.StartBackgroundMonitoring(_window.DispatcherQueue);
     }
 
     private static IServiceProvider ConfigureServices()

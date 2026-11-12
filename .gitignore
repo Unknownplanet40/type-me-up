@@ -3,6 +3,8 @@ node_modules/
 dist/
 bin/
 obj/
+installer/*.exe
+*-win-x64.zip
 TestResults/
 .vs/
 *.user

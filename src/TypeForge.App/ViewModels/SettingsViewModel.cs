@@ -40,10 +40,10 @@ public sealed partial class SettingsViewModel : ObservableObject
     [ObservableProperty]
     private string _installActionText = "Download & Install";
 
-    public string CurrentVersionDisplay => $"TypeForge v{_updateService.CurrentVersion}";
-    public string InstallModeDisplay => _updateService.IsInstalledViaInstaller
-        ? "Installed app (1-click delta updates enabled)"
-        : "Portable / development build";
+    public string CurrentVersionDisplay => $"TypeForge v{_updateService.CurrentVersionString}";
+    public string InstallModeDisplay => _updateService.IsInstalledCopy
+        ? "Installed via TypeForge Setup (silent in-app updates enabled)"
+        : "Development / portable build (in-app Setup updater ready)";
 
     public int ThemeIndex
     {
@@ -228,20 +228,45 @@ public sealed partial class SettingsViewModel : ObservableObject
         _state = state;
         _navigation = navigation;
         _updateService = updateService;
-
-        if (_updateService.LastOutcome is { } cached)
-        {
-            ApplyOutcome(cached);
-        }
+        SyncUpdateState();
     }
 
-    private void ApplyOutcome(AppUpdateCheckOutcome outcome)
+    public void Attach()
     {
-        UpdateStatusMessage = outcome.Message;
+        _updateService.StateChanged += OnUpdateStateChanged;
+        _updateService.DownloadProgressChanged += OnDownloadProgressChanged;
+        SyncUpdateState();
+    }
 
-        if (!string.IsNullOrWhiteSpace(outcome.ReleaseNotes))
+    public void Detach()
+    {
+        _updateService.StateChanged -= OnUpdateStateChanged;
+        _updateService.DownloadProgressChanged -= OnDownloadProgressChanged;
+    }
+
+    private void OnUpdateStateChanged(UpdateState state, string message)
+    {
+        SyncUpdateState();
+    }
+
+    private void OnDownloadProgressChanged(double progress)
+    {
+        DownloadProgressPercent = (int)Math.Round(Math.Clamp(progress * 100.0, 0, 100));
+    }
+
+    private void SyncUpdateState()
+    {
+        UpdateState state = _updateService.State;
+        ReleaseInfo? release = _updateService.LatestRelease;
+
+        UpdateStatusMessage = _updateService.StatusMessage;
+        IsCheckingUpdates = state == UpdateState.Checking;
+        IsDownloadingUpdate = state is UpdateState.Downloading or UpdateState.Downloaded;
+        DownloadProgressPercent = (int)Math.Round(Math.Clamp(_updateService.DownloadProgress * 100.0, 0, 100));
+
+        if (release is not null && !string.IsNullOrWhiteSpace(release.Changelog))
         {
-            ReleaseNotesText = outcome.ReleaseNotes;
+            ReleaseNotesText = release.Changelog;
             HasReleaseNotes = true;
         }
         else
@@ -250,14 +275,11 @@ public sealed partial class SettingsViewModel : ObservableObject
             HasReleaseNotes = false;
         }
 
-        if (outcome.Status == UpdateCheckStatus.UpdateAvailable)
+        if (state == UpdateState.UpdateAvailable && release is not null)
         {
-            InstallActionText = $"Install v{outcome.AvailableVersion}";
-            CanInstallUpdate = true;
-        }
-        else if (outcome.Status == UpdateCheckStatus.InstallerUpdateAvailable)
-        {
-            InstallActionText = $"Get Setup v{outcome.AvailableVersion}";
+            InstallActionText = string.IsNullOrWhiteSpace(release.DownloadUrl)
+                ? $"Open {release.TagName}"
+                : $"Download & Install {release.TagName}";
             CanInstallUpdate = true;
         }
         else
@@ -274,19 +296,8 @@ public sealed partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        IsCheckingUpdates = true;
-        CanInstallUpdate = false;
-        UpdateStatusMessage = "Checking GitHub Releases...";
-
-        try
-        {
-            AppUpdateCheckOutcome outcome = await _updateService.CheckForUpdatesAsync();
-            ApplyOutcome(outcome);
-        }
-        finally
-        {
-            IsCheckingUpdates = false;
-        }
+        await _updateService.CheckForUpdatesAsync(silentBackground: false);
+        SyncUpdateState();
     }
 
     [RelayCommand]
@@ -297,26 +308,14 @@ public sealed partial class SettingsViewModel : ObservableObject
             return;
         }
 
-        if (!_updateService.IsInstalledViaInstaller || !_updateService.HasDownloadableUpdate)
+        if (_updateService.LatestRelease is null || string.IsNullOrWhiteSpace(_updateService.LatestRelease.DownloadUrl))
         {
             _ = await Launcher.LaunchUriAsync(new Uri(_updateService.ReleasePageUrl));
             return;
         }
 
-        IsDownloadingUpdate = true;
-        DownloadProgressPercent = 0;
-        UpdateStatusMessage = "Downloading update package...";
-
-        try
-        {
-            IProgress<int> progress = new Progress<int>(p => DownloadProgressPercent = Math.Clamp(p, 0, 100));
-            await _updateService.DownloadAndApplyUpdateAsync(percent => progress.Report(percent));
-            UpdateStatusMessage = "Applying update and restarting...";
-        }
-        catch (Exception ex)
-        {
-            UpdateStatusMessage = $"Update failed: {ex.Message}";
-            IsDownloadingUpdate = false;
-        }
+        CanInstallUpdate = false;
+        await _updateService.DownloadAndInstallAsync();
+        SyncUpdateState();
     }
 }
