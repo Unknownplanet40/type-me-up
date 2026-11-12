@@ -1,9 +1,16 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Data.Sqlite;
 using TypeForge.Core.Engine;
 using TypeForge.Core.Models;
 
 namespace TypeForge.Core.Services;
+
+[JsonSourceGenerationOptions(WriteIndented = true, PropertyNameCaseInsensitive = true)]
+[JsonSerializable(typeof(ProfileRegistry))]
+internal sealed partial class ProfileJsonContext : JsonSerializerContext
+{
+}
 
 /// <summary>
 /// Manages local user profiles, per-profile SQLite database paths, legacy DB migration, and cross-profile rankings.
@@ -49,12 +56,6 @@ public interface IProfileService
 /// </summary>
 public sealed class ProfileService : IProfileService
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNameCaseInsensitive = true
-    };
-
     private static readonly string[] DefaultPalette =
     [
         "#A78BFA", // Purple
@@ -117,7 +118,7 @@ public sealed class ProfileService : IProfileService
             try
             {
                 string json = File.ReadAllText(_registryPath);
-                ProfileRegistry? loaded = JsonSerializer.Deserialize<ProfileRegistry>(json, JsonOptions);
+                ProfileRegistry? loaded = JsonSerializer.Deserialize(json, ProfileJsonContext.Default.ProfileRegistry);
                 if (loaded is { Profiles.Count: > 0 })
                 {
                     _registry = loaded;
@@ -356,7 +357,7 @@ public sealed class ProfileService : IProfileService
     private void SaveRegistry()
     {
         Directory.CreateDirectory(_rootDirectory);
-        string json = JsonSerializer.Serialize(_registry, JsonOptions);
+        string json = JsonSerializer.Serialize(_registry, ProfileJsonContext.Default.ProfileRegistry);
         File.WriteAllText(_registryPath, json);
     }
 
