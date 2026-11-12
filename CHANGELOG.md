@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-12
+
+### Changed
+- point version.json at release v0.5.0 [skip ci] (b0899e7)
+
+### Fixed
+- use source-generated JsonSerializerContext in ProfileService (3015271)
+
 ## [0.5.0] - 2026-11-12
 
 ### Added
