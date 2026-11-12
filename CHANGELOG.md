@@ -4,6 +4,26 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-12
+
+### Added
+- Reusable `TypingStreamView` with configurable font family/weight/style, whitespace glyphs (`None` / `Bar` / `Bullet`), cursor shape (`Block` / `Box` / `Line` / `Underline`), and smooth vs jumping cursor motion (dcc2a61)
+- Shared `TypingSettingsControl` with animated `"Eat more apples and oranges."` live preview used across both `PracticePage` and `TestPage` (dcc2a61)
+- `BookModel`, `TestTextGenerator`, bundled offline *Alice's Adventures in Wonderland* (`books.json`), and 1,000-word `english_words.json` (dcc2a61)
+- `ForgiveErrors` and `SpaceSkipsWords` support in `TypingEngine` and 4-theme volume-scaled `KeystrokeAudioService` (`Default`, `Mechanical`, `Typewriter`, `Soft`) (dcc2a61)
+- Unit tests in `TestFeatureCoreTests` covering book loading, word stats, pseudo-words, `ForgiveErrors`, `SpaceSkipsWords`, and SQLite settings round-trip (dcc2a61)
+
+### Changed
+- Switched default startup route to `Course` and maximized/centered main window on work area (dcc2a61)
+- Widened `PracticePage` Session Complete card so `"Review Weak Keys"` displays without clipping (dcc2a61)
+- point version.json at release v0.3.0 [skip ci] (8edb8b6)
+
+### Fixed
+- Fixed Practice and Test keystroke registration after clicking top-bar tabs via `AllowFocusOnInteraction="False"`, deferred surface focus, and `RootGrid` shell fallback routing (dcc2a61)
+
+### Removed
+- Removed Course Certificate / Progress Report UI and PNG export from Statistics (dcc2a61)
+
 ## [0.3.0] - 2026-11-12
 
 ### Added
