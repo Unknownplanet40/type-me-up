@@ -4,6 +4,21 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-12
+
+### Added
+- Inno Setup script at `installer/TypeForge.iss` compiling `TypeForge-Setup-win-x64.exe` with `PrivilegesRequired=lowest`, `CloseApplications=yes`, and LZMA2 compression. (3bef703)
+- Trim-safe `UpdateJsonContext` and `UpdateState` / `ReleaseInfo` models in `UpdateService` with 12s startup plus 24h `DispatcherTimer` checks, download progress streaming, and `/VERYSILENT` installer handoff. (3bef703)
+
+### Changed
+- Wired `IUpdateService` background monitoring, state events, and download progress into `App.xaml.cs`, `MainWindow.xaml.cs`, `SettingsViewModel.cs`, and `SettingsPage.xaml.cs`. (3bef703)
+- Updated `.github/workflows/release.yml` and `.github/workflows/winui3-release.yml` to publish self-contained `win-x64`, package `TypeForge-win-x64.zip`, compile `TypeForge-Setup-win-x64.exe` via Inno Setup 6, and upload both assets. (3bef703)
+- Ignored generated `installer/*.exe` and `*-win-x64.zip` build outputs in `.gitignore`. (3bef703)
+- point version.json at release v0.2.0 [skip ci] (cae65f3)
+
+### Removed
+- Removed the `Velopack` NuGet reference, `DISABLE_XAML_GENERATED_MAIN` constant, and custom `src/TypeForge.App/Program.cs` bootstrap. (3bef703)
+
 ## [0.2.0] - 2026-11-12
 
 ### Added
