@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-11-12
+
+### Changed
+- point version.json at release v0.5.1 [skip ci] (917064b)
+
+### Fixed
+- use ForgeCardInnerBrush and safe theme lookup in profile picker (0719e91)
+
 ## [0.5.1] - 2026-11-12
 
 ### Changed
