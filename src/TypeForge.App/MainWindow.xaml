@@ -38,9 +38,9 @@
                     Foreground="{ThemeResource ForgeTextPrimaryBrush}"
                     VerticalAlignment="Center" />
 
-                <Border Width="1" Height="11" Background="{ThemeResource ForgeHairlineBrush}" VerticalAlignment="Center" />
+                <Border x:Name="TopBarNavDivider" Width="1" Height="11" Background="{ThemeResource ForgeHairlineBrush}" VerticalAlignment="Center" />
 
-                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                <StackPanel x:Name="TopBarNavLinks" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
                     <Button x:Name="NavCourse" Tag="course" Click="NavItem_Click" AllowFocusOnInteraction="False" AutomationProperties.Name="Course" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
                         <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock x:Name="LblCourse" Text="Course" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />

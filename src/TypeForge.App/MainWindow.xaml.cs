@@ -175,6 +175,11 @@ public sealed partial class MainWindow : Window
 
     private void NavItem_Click(object sender, RoutedEventArgs e)
     {
+        if (_state.ShouldShowProfilePickerOnLaunch)
+        {
+            return;
+        }
+
         if (sender is Button { Tag: string route })
         {
             ViewModel.NavigateCommand.Execute(route);
@@ -188,6 +193,11 @@ public sealed partial class MainWindow : Window
 
     private void FocusActiveTypingPage()
     {
+        if (_state.ShouldShowProfilePickerOnLaunch)
+        {
+            return;
+        }
+
         if (ContentFrame.Content is PracticePage practicePage)
         {
             practicePage.FocusTypingSurface();
@@ -211,7 +221,7 @@ public sealed partial class MainWindow : Window
 
     private void RootGrid_CharacterReceived(UIElement sender, CharacterReceivedRoutedEventArgs args)
     {
-        if (args.Handled || IsEditableOrDialogControlFocused())
+        if (args.Handled || _state.ShouldShowProfilePickerOnLaunch || IsEditableOrDialogControlFocused())
         {
             return;
         }
@@ -236,7 +246,7 @@ public sealed partial class MainWindow : Window
 
     private void RootGrid_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (e.Handled || IsEditableOrDialogControlFocused())
+        if (e.Handled || _state.ShouldShowProfilePickerOnLaunch || IsEditableOrDialogControlFocused())
         {
             return;
         }
@@ -309,6 +319,11 @@ public sealed partial class MainWindow : Window
 
         bool showPicker = _state.ShouldShowProfilePickerOnLaunch;
         ProfilePickerOverlay.Visibility = showPicker ? Visibility.Visible : Visibility.Collapsed;
+        ContentFrame.IsEnabled = !showPicker;
+        ContentFrame.Visibility = showPicker ? Visibility.Collapsed : Visibility.Visible;
+        TopBarNavDivider.Visibility = showPicker ? Visibility.Collapsed : Visibility.Visible;
+        TopBarNavLinks.Visibility = showPicker ? Visibility.Collapsed : Visibility.Visible;
+        TopBarRightGroup.Visibility = showPicker || ViewModel.IsFocusMode ? Visibility.Collapsed : Visibility.Visible;
         if (showPicker)
         {
             RefreshProfilePickerOverlay();
