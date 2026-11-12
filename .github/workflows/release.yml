@@ -23,7 +23,6 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       !contains(github.event.head_commit.message, '[skip ci]')
     outputs:
-      released: ${{ steps.changelog.outputs.bump != 'none' && 'true' || 'false' }}
       new_version: ${{ steps.version.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
@@ -199,7 +198,7 @@ jobs:
 
   publish-installer:
     needs: release
-    if: needs.release.outputs.released == 'true'
+    if: needs.release.outputs.new_version != ''
     runs-on: windows-latest
     permissions:
       contents: write
