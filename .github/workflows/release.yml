@@ -1,5 +1,8 @@
 name: Release
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       target:
@@ -8,6 +11,9 @@ on:
         default: 'main'
 permissions:
   contents: write
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 env:
   DEFAULT_BRANCH: main
 jobs:
@@ -16,6 +22,9 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       !contains(github.event.head_commit.message, '[skip ci]')
+    outputs:
+      released: ${{ steps.changelog.outputs.bump != 'none' && 'true' || 'false' }}
+      new_version: ${{ steps.version.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -163,7 +172,8 @@ jobs:
           {
             "name": "${{ github.event.repository.name }}",
             "version": "${NEW_VERSION}",
-            "channel": "stable"
+            "channel": "stable",
+            "download_url": "https://github.com/${{ github.repository }}/releases/download/v${NEW_VERSION}/TypeForgeApp-win-Setup.exe"
           }
           EOF
           git add version.json
@@ -186,3 +196,77 @@ jobs:
             release_notes.md
             CHANGELOG.md
             changelog_body.txt
+
+  publish-installer:
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v${{ needs.release.outputs.new_version }}
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      - name: Restore & Test Core
+        run: |
+          dotnet restore TypeForge.sln
+          dotnet test tests/TypeForge.Tests/TypeForge.Tests.csproj -c Release --no-restore
+
+      - name: Publish Self-Contained WinUI3 App (win-x64)
+        run: |
+          dotnet publish src/TypeForge.App/TypeForge.App.csproj -c Release -r win-x64 -p:Platform=x64 --self-contained true -o dist/TypeForge-win-x64
+
+      - name: Download Prior Velopack Releases for Delta Generation
+        shell: bash
+        run: |
+          mkdir -p bin/Dist
+          vpk download github --repoUrl "https://github.com/${{ github.repository }}" --outputDir "bin/Dist" || true
+
+      - name: Package Windows Setup Installer & Delta Feed (Velopack)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ needs.release.outputs.new_version }}
+        run: |
+          New-Item -ItemType Directory -Force -Path bin/Dist | Out-Null
+          gh release download "v$env:NEW_VERSION" --pattern "release_notes.md" --clobber 2>$null
+          $packArgs = @(
+            'pack',
+            '--packId', 'TypeForgeApp',
+            '--packTitle', 'TypeForge',
+            '--packAuthors', 'TypeForge',
+            '--packVersion', $env:NEW_VERSION,
+            '--runtime', 'win-x64',
+            '--packDir', 'dist/TypeForge-win-x64',
+            '--mainExe', 'TypeForge.App.exe',
+            '--icon', 'src/TypeForge.App/Assets/AppIcon.ico',
+            '--splashProgressColor', '#A78BFA',
+            '--outputDir', 'bin/Dist'
+          )
+          if (Test-Path 'release_notes.md') {
+            $packArgs += @('--releaseNotes', 'release_notes.md')
+          }
+          vpk @packArgs
+
+      - name: Upload Installer & Update Feed to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ needs.release.outputs.new_version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          ASSETS=(bin/Dist/*)
+          if [ ${#ASSETS[@]} -gt 0 ]; then
+            gh release upload "v${NEW_VERSION}" "${ASSETS[@]}" --clobber
+          fi

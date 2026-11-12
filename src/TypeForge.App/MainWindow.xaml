@@ -95,6 +95,29 @@
                 </Border>
 
                 <Button
+                    x:Name="BtnUpdateBadge"
+                    Visibility="Collapsed"
+                    Tag="settings"
+                    Click="NavItem_Click"
+                    Height="22"
+                    Padding="9,0"
+                    CornerRadius="11"
+                    Background="#24A78BFA"
+                    BorderBrush="{ThemeResource ForgePurpleBrush}"
+                    BorderThickness="1"
+                    VerticalAlignment="Center"
+                    ToolTipService.ToolTip="A new TypeForge update is ready in Settings"
+                    AutomationProperties.Name="Update available">
+                    <TextBlock
+                        x:Name="LblUpdateBadge"
+                        Text="Update"
+                        FontSize="11"
+                        FontWeight="SemiBold"
+                        Foreground="{ThemeResource ForgePurpleBrush}"
+                        VerticalAlignment="Center" />
+                </Button>
+
+                <Button
                     x:Name="NavSettings"
                     Tag="settings"
                     Click="NavItem_Click"

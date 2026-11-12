@@ -60,6 +60,12 @@ public partial class App : Application
         _window = Services.GetRequiredService<MainWindow>();
         navigation.ApplyTheme(state.Settings.Theme);
         _window.Activate();
+
+        IUpdateService updateService = Services.GetRequiredService<IUpdateService>();
+        if (updateService.IsInstalledViaInstaller)
+        {
+            _ = Task.Run(() => updateService.CheckForUpdatesAsync());
+        }
     }
 
     private static IServiceProvider ConfigureServices()
@@ -73,6 +79,7 @@ public partial class App : Application
         services.AddSingleton<ITypeForgeStateService, TypeForgeStateService>();
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IKeystrokeAudioService, KeystrokeAudioService>();
+        services.AddSingleton<IUpdateService, UpdateService>();
 
         services.AddTransient<MainWindowViewModel>();
         services.AddTransient<PracticeViewModel>();

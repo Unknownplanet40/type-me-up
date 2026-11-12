@@ -32,6 +32,9 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
       - name: Restore
         run: dotnet restore TypeForge.sln
 
@@ -42,14 +45,36 @@ jobs:
         run: |
           dotnet publish src/TypeForge.App/TypeForge.App.csproj -c Release -r win-x64 -p:Platform=x64 --self-contained true -o dist/TypeForge-win-x64
 
-      - name: Package Portable Archive
+      - name: Download Prior Velopack Releases for Delta Generation
+        shell: bash
+        run: |
+          mkdir -p bin/Dist
+          vpk download github --repoUrl "https://github.com/${{ github.repository }}" --outputDir "bin/Dist" || true
+
+      - name: Package Windows Setup Installer & Delta Feed (Velopack)
         shell: pwsh
         run: |
           $version = Get-Content VERSION -Raw | ForEach-Object { $_.Trim() }
           New-Item -ItemType Directory -Force -Path bin/Dist | Out-Null
-          Compress-Archive -Path "dist/TypeForge-win-x64/*" -DestinationPath "bin/Dist/TypeForge-v$version-win-x64.zip" -Force
+          $packArgs = @(
+            'pack',
+            '--packId', 'TypeForgeApp',
+            '--packTitle', 'TypeForge',
+            '--packAuthors', 'TypeForge',
+            '--packVersion', $version,
+            '--runtime', 'win-x64',
+            '--packDir', 'dist/TypeForge-win-x64',
+            '--mainExe', 'TypeForge.App.exe',
+            '--icon', 'src/TypeForge.App/Assets/AppIcon.ico',
+            '--splashProgressColor', '#A78BFA',
+            '--outputDir', 'bin/Dist'
+          )
+          if (Test-Path 'release_notes.md') {
+            $packArgs += @('--releaseNotes', 'release_notes.md')
+          }
+          vpk @packArgs
 
-      - name: Ensure GitHub Release Exists and Upload Binary Archive
+      - name: Ensure GitHub Release Exists and Upload Installer + Update Assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
@@ -59,20 +84,24 @@ jobs:
           if ! gh release view "v${VERSION}" >/dev/null 2>&1; then
             gh release create "v${VERSION}" --title "${{ github.event.repository.name }} v${VERSION}" --generate-notes
           fi
-          gh release upload "v${VERSION}" "bin/Dist/TypeForge-v${VERSION}-win-x64.zip" --clobber
+          shopt -s nullglob
+          ASSETS=(bin/Dist/*)
+          if [ ${#ASSETS[@]} -gt 0 ]; then
+            gh release upload "v${VERSION}" "${ASSETS[@]}" --clobber
+          fi
 
       - name: Update version.json
         shell: bash
         run: |
           set -euo pipefail
           VERSION=$(cat VERSION | tr -d '[:space:]')
-          ZIP_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/TypeForge-v${VERSION}-win-x64.zip"
+          SETUP_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/TypeForgeApp-win-Setup.exe"
           cat > version.json <<EOF
           {
             "name": "${{ github.event.repository.name }}",
             "version": "${VERSION}",
             "channel": "stable",
-            "download_url": "${ZIP_URL}"
+            "download_url": "${SETUP_URL}"
           }
           EOF
           git config user.name "github-actions[bot]"

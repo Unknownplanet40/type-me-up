@@ -15,6 +15,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Spacing="4">
@@ -194,12 +195,77 @@
             </Border>
 
             <Border Grid.Row="3" Style="{StaticResource ForgeCardStyle}">
-                <Grid>
+                <StackPanel Spacing="14">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="3">
+                            <TextBlock Text="Updates &amp; What's New" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="{x:Bind ViewModel.InstallModeDisplay, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button
+                                Content="Check for Updates"
+                                Style="{StaticResource ForgeSecondaryButtonStyle}"
+                                Command="{x:Bind ViewModel.CheckForUpdatesCommand}"
+                                IsEnabled="{x:Bind ViewModel.CanCheckUpdates, Mode=OneWay}"
+                                AutomationProperties.Name="Check for updates" />
+                            <Button
+                                Content="{x:Bind ViewModel.InstallActionText, Mode=OneWay}"
+                                Style="{StaticResource ForgePrimaryButtonStyle}"
+                                Command="{x:Bind ViewModel.InstallUpdateCommand}"
+                                Visibility="{x:Bind ViewModel.CanInstallUpdate, Mode=OneWay}"
+                                AutomationProperties.Name="Install update" />
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock
+                        Text="{x:Bind ViewModel.UpdateStatusMessage, Mode=OneWay}"
+                        FontSize="12"
+                        Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                        TextWrapping="Wrap" />
+
+                    <ProgressBar
+                        Minimum="0"
+                        Maximum="100"
+                        Value="{x:Bind ViewModel.DownloadProgressPercent, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.IsDownloadingUpdate, Mode=OneWay}"
+                        Height="4"
+                        Foreground="{ThemeResource ForgePurpleBrush}" />
+
+                    <Border
+                        Visibility="{x:Bind ViewModel.HasReleaseNotes, Mode=OneWay}"
+                        Background="{ThemeResource ForgeCardInnerBrush}"
+                        BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Latest Release Notes" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock
+                                Text="{x:Bind ViewModel.ReleaseNotesText, Mode=OneWay}"
+                                FontSize="12"
+                                Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                                TextWrapping="Wrap"
+                                IsTextSelectionEnabled="True" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="4" Style="{StaticResource ForgeCardStyle}">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
                     <StackPanel Spacing="4">
-                        <TextBlock Text="Offline Privacy" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                        <TextBlock Text="100% offline desktop application. Zero telemetry, zero network requests." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        <TextBlock Text="Privacy &amp; Local Storage" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                        <TextBlock Text="All typing metrics, drills, and SQLite progress stay local on your PC with zero telemetry. Network requests run only when checking GitHub Releases for updates." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <TextBlock Text="TypeForge v0.2.0" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.CurrentVersionDisplay, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
                 </Grid>
             </Border>
         </Grid>

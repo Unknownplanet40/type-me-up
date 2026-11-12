@@ -15,14 +15,19 @@ namespace TypeForge.App;
 public sealed partial class MainWindow : Window
 {
     private readonly INavigationService _navigation;
+    private readonly IUpdateService _updateService;
     private readonly Dictionary<string, (TextBlock Label, Border Dot)> _routeIndicators;
 
     public MainWindowViewModel ViewModel { get; }
 
-    public MainWindow(MainWindowViewModel viewModel, INavigationService navigation)
+    public MainWindow(
+        MainWindowViewModel viewModel,
+        INavigationService navigation,
+        IUpdateService updateService)
     {
         ViewModel = viewModel;
         _navigation = navigation;
+        _updateService = updateService;
         InitializeComponent();
 
         ExtendsContentIntoTitleBar = true;
@@ -58,8 +63,25 @@ public sealed partial class MainWindow : Window
 
         RootGrid.Loaded += (_, _) => AlignTopBarRightInset();
         RootGrid.ActualThemeChanged += (_, _) => UpdateRouteStyles();
+        _updateService.UpdateStatusChanged += outcome =>
+            DispatcherQueue.TryEnqueue(() => ApplyUpdateBadge(outcome));
+
+        if (_updateService.LastOutcome is { } cachedOutcome)
+        {
+            ApplyUpdateBadge(cachedOutcome);
+        }
 
         _navigation.NavigateTo("practice");
+    }
+
+    private void ApplyUpdateBadge(AppUpdateCheckOutcome outcome)
+    {
+        bool available = outcome.Status is UpdateCheckStatus.UpdateAvailable or UpdateCheckStatus.InstallerUpdateAvailable;
+        BtnUpdateBadge.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        if (available && !string.IsNullOrWhiteSpace(outcome.AvailableVersion))
+        {
+            LblUpdateBadge.Text = $"Update v{outcome.AvailableVersion}";
+        }
     }
 
     private void AlignTopBarRightInset()

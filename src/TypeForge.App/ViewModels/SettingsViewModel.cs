@@ -1,6 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using TypeForge.App.Services;
 using TypeForge.Core.Models;
+using Windows.System;
 
 namespace TypeForge.App.ViewModels;
 
@@ -8,6 +10,40 @@ public sealed partial class SettingsViewModel : ObservableObject
 {
     private readonly ITypeForgeStateService _state;
     private readonly INavigationService _navigation;
+    private readonly IUpdateService _updateService;
+
+    [ObservableProperty]
+    private string _updateStatusMessage = "Click Check for Updates to check GitHub Releases and What's New.";
+
+    [ObservableProperty]
+    private string _releaseNotesText = string.Empty;
+
+    [ObservableProperty]
+    private bool _hasReleaseNotes;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanCheckUpdates))]
+    private bool _isCheckingUpdates;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanCheckUpdates))]
+    private bool _isDownloadingUpdate;
+
+    public bool CanCheckUpdates => !IsCheckingUpdates && !IsDownloadingUpdate;
+
+    [ObservableProperty]
+    private int _downloadProgressPercent;
+
+    [ObservableProperty]
+    private bool _canInstallUpdate;
+
+    [ObservableProperty]
+    private string _installActionText = "Download & Install";
+
+    public string CurrentVersionDisplay => $"TypeForge v{_updateService.CurrentVersion}";
+    public string InstallModeDisplay => _updateService.IsInstalledViaInstaller
+        ? "Installed app (1-click delta updates enabled)"
+        : "Portable / development build";
 
     public int ThemeIndex
     {
@@ -184,9 +220,103 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
-    public SettingsViewModel(ITypeForgeStateService state, INavigationService navigation)
+    public SettingsViewModel(
+        ITypeForgeStateService state,
+        INavigationService navigation,
+        IUpdateService updateService)
     {
         _state = state;
         _navigation = navigation;
+        _updateService = updateService;
+
+        if (_updateService.LastOutcome is { } cached)
+        {
+            ApplyOutcome(cached);
+        }
+    }
+
+    private void ApplyOutcome(AppUpdateCheckOutcome outcome)
+    {
+        UpdateStatusMessage = outcome.Message;
+
+        if (!string.IsNullOrWhiteSpace(outcome.ReleaseNotes))
+        {
+            ReleaseNotesText = outcome.ReleaseNotes;
+            HasReleaseNotes = true;
+        }
+        else
+        {
+            ReleaseNotesText = string.Empty;
+            HasReleaseNotes = false;
+        }
+
+        if (outcome.Status == UpdateCheckStatus.UpdateAvailable)
+        {
+            InstallActionText = $"Install v{outcome.AvailableVersion}";
+            CanInstallUpdate = true;
+        }
+        else if (outcome.Status == UpdateCheckStatus.InstallerUpdateAvailable)
+        {
+            InstallActionText = $"Get Setup v{outcome.AvailableVersion}";
+            CanInstallUpdate = true;
+        }
+        else
+        {
+            CanInstallUpdate = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        if (IsCheckingUpdates || IsDownloadingUpdate)
+        {
+            return;
+        }
+
+        IsCheckingUpdates = true;
+        CanInstallUpdate = false;
+        UpdateStatusMessage = "Checking GitHub Releases...";
+
+        try
+        {
+            AppUpdateCheckOutcome outcome = await _updateService.CheckForUpdatesAsync();
+            ApplyOutcome(outcome);
+        }
+        finally
+        {
+            IsCheckingUpdates = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task InstallUpdateAsync()
+    {
+        if (IsDownloadingUpdate || IsCheckingUpdates)
+        {
+            return;
+        }
+
+        if (!_updateService.IsInstalledViaInstaller || !_updateService.HasDownloadableUpdate)
+        {
+            _ = await Launcher.LaunchUriAsync(new Uri(_updateService.ReleasePageUrl));
+            return;
+        }
+
+        IsDownloadingUpdate = true;
+        DownloadProgressPercent = 0;
+        UpdateStatusMessage = "Downloading update package...";
+
+        try
+        {
+            IProgress<int> progress = new Progress<int>(p => DownloadProgressPercent = Math.Clamp(p, 0, 100));
+            await _updateService.DownloadAndApplyUpdateAsync(percent => progress.Report(percent));
+            UpdateStatusMessage = "Applying update and restarting...";
+        }
+        catch (Exception ex)
+        {
+            UpdateStatusMessage = $"Update failed: {ex.Message}";
+            IsDownloadingUpdate = false;
+        }
     }
 }
