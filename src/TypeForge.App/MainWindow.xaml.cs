@@ -315,11 +315,39 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private static Brush ResolveThemeBrush(ResourceDictionary? dict, string key, Color fallback)
+    {
+        if (dict is not null && dict.TryGetValue(key, out object? val) && val is Brush b)
+        {
+            return b;
+        }
+
+        if (Application.Current.Resources.TryGetValue(key, out object? appVal) && appVal is Brush appBrush)
+        {
+            return appBrush;
+        }
+
+        return new SolidColorBrush(fallback);
+    }
+
     private void RefreshProfilePickerOverlay()
     {
         ProfilePickerCardsHost.Children.Clear();
         IReadOnlyList<ProfileRankingEntry> rankings = _state.GetProfileRankings();
         bool showRank = rankings.Count >= 2;
+
+        string themeKey = RootGrid.ActualTheme == ElementTheme.Light ? "Light" : "Dark";
+        ResourceDictionary? dict = Application.Current.Resources.ThemeDictionaries.TryGetValue(themeKey, out object? td)
+            ? td as ResourceDictionary
+            : null;
+
+        Brush cardBrush = ResolveThemeBrush(dict, "ForgeCardBrush", Color.FromArgb(0xBF, 0x14, 0x14, 0x18));
+        Brush cardInnerBrush = ResolveThemeBrush(dict, "ForgeCardInnerBrush", Color.FromArgb(0xBF, 0x19, 0x19, 0x1E));
+        Brush hairlineBrush = ResolveThemeBrush(dict, "ForgeHairlineBrush", Color.FromArgb(0xFF, 0x24, 0x24, 0x29));
+        Brush purpleBrush = ResolveThemeBrush(dict, "ForgePurpleBrush", Color.FromArgb(0xFF, 0xA7, 0x8B, 0xFA));
+        Brush textPrimaryBrush = ResolveThemeBrush(dict, "ForgeTextPrimaryBrush", Color.FromArgb(0xFF, 0xF4, 0xF4, 0xF5));
+        Brush textSecondaryBrush = ResolveThemeBrush(dict, "ForgeTextSecondaryBrush", Color.FromArgb(0xFF, 0xA1, 0xA1, 0xAA));
+        Brush textMutedBrush = ResolveThemeBrush(dict, "ForgeTextMutedBrush", Color.FromArgb(0xFF, 0x8E, 0x8E, 0x99));
 
         foreach (ProfileRankingEntry entry in rankings)
         {
@@ -340,10 +368,8 @@ public sealed partial class MainWindow : Window
                 {
                     Background = entry.Rank == 1
                         ? new SolidColorBrush(Color.FromArgb(36, 167, 139, 250))
-                        : (Brush)Application.Current.Resources["ForgeSubtleSurfaceBrush"],
-                    BorderBrush = entry.Rank == 1
-                        ? (Brush)Application.Current.Resources["ForgePurpleBrush"]
-                        : (Brush)Application.Current.Resources["ForgeHairlineBrush"],
+                        : cardInnerBrush,
+                    BorderBrush = entry.Rank == 1 ? purpleBrush : hairlineBrush,
                     BorderThickness = new Thickness(1),
                     CornerRadius = new CornerRadius(10),
                     Padding = new Thickness(8, 2, 8, 2),
@@ -353,9 +379,7 @@ public sealed partial class MainWindow : Window
                         Text = $"#{entry.Rank}",
                         FontSize = 11,
                         FontWeight = FontWeights.SemiBold,
-                        Foreground = entry.Rank == 1
-                            ? (Brush)Application.Current.Resources["ForgePurpleBrush"]
-                            : (Brush)Application.Current.Resources["ForgeTextSecondaryBrush"]
+                        Foreground = entry.Rank == 1 ? purpleBrush : textSecondaryBrush
                     }
                 };
                 topRow.Children.Add(rankBadge);
@@ -367,7 +391,7 @@ public sealed partial class MainWindow : Window
                 {
                     Text = "Last used",
                     FontSize = 11,
-                    Foreground = (Brush)Application.Current.Resources["ForgeTextMutedBrush"],
+                    Foreground = textMutedBrush,
                     HorizontalAlignment = HorizontalAlignment.Right,
                     VerticalAlignment = VerticalAlignment.Center
                 };
@@ -400,7 +424,7 @@ public sealed partial class MainWindow : Window
                 Text = profile.Name,
                 FontSize = 15,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = (Brush)Application.Current.Resources["ForgeTextPrimaryBrush"],
+                Foreground = textPrimaryBrush,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 TextTrimming = TextTrimming.CharacterEllipsis
             });
@@ -412,7 +436,7 @@ public sealed partial class MainWindow : Window
             {
                 Text = statsLine,
                 FontSize = 12,
-                Foreground = (Brush)Application.Current.Resources["ForgeTextSecondaryBrush"],
+                Foreground = textSecondaryBrush,
                 HorizontalAlignment = HorizontalAlignment.Center
             });
 
@@ -422,10 +446,8 @@ public sealed partial class MainWindow : Window
                 Content = cardContent,
                 Padding = new Thickness(16),
                 CornerRadius = new CornerRadius(12),
-                Background = (Brush)Application.Current.Resources["ForgeCardBrush"],
-                BorderBrush = isActive
-                    ? (Brush)Application.Current.Resources["ForgePurpleBrush"]
-                    : (Brush)Application.Current.Resources["ForgeHairlineBrush"],
+                Background = cardBrush,
+                BorderBrush = isActive ? purpleBrush : hairlineBrush,
                 BorderThickness = new Thickness(isActive ? 1.5 : 1)
             };
             Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(cardBtn, $"Continue as {profile.Name}");
@@ -447,14 +469,14 @@ public sealed partial class MainWindow : Window
                     Width = 56,
                     Height = 56,
                     CornerRadius = new CornerRadius(28),
-                    BorderBrush = (Brush)Application.Current.Resources["ForgeHairlineBrush"],
+                    BorderBrush = hairlineBrush,
                     BorderThickness = new Thickness(1),
                     HorizontalAlignment = HorizontalAlignment.Center,
                     Child = new FontIcon
                     {
                         Glyph = "\uE710",
                         FontSize = 20,
-                        Foreground = (Brush)Application.Current.Resources["ForgeTextSecondaryBrush"]
+                        Foreground = textSecondaryBrush
                     }
                 },
                 new TextBlock
@@ -462,7 +484,7 @@ public sealed partial class MainWindow : Window
                     Text = "New Profile",
                     FontSize = 14,
                     FontWeight = FontWeights.SemiBold,
-                    Foreground = (Brush)Application.Current.Resources["ForgeTextSecondaryBrush"],
+                    Foreground = textSecondaryBrush,
                     HorizontalAlignment = HorizontalAlignment.Center
                 }
             }
@@ -474,7 +496,7 @@ public sealed partial class MainWindow : Window
             Padding = new Thickness(16),
             CornerRadius = new CornerRadius(12),
             Background = new SolidColorBrush(Colors.Transparent),
-            BorderBrush = (Brush)Application.Current.Resources["ForgeHairlineBrush"],
+            BorderBrush = hairlineBrush,
             BorderThickness = new Thickness(1)
         };
         Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(addBtn, "Create new profile");
