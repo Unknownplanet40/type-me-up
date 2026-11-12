@@ -24,7 +24,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Assets\**\*.png" />
+    <Content Include="Assets\**\*.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets\TypeForge.ico" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
