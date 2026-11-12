@@ -4,6 +4,7 @@ using TypeForge.Core.Services;
 
 namespace TypeForge.Tests;
 
+[Collection("SqliteTests")]
 public sealed class SqliteRepositoryTests : IDisposable
 {
     private readonly string _tempDir;

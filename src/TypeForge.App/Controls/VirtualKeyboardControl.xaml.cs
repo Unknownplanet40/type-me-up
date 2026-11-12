@@ -1,6 +1,8 @@
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using TypeForge.Core.Engine;
 using TypeForge.Core.Models;
 using Windows.UI;
 
@@ -9,6 +11,8 @@ namespace TypeForge.App.Controls;
 public sealed partial class VirtualKeyboardControl : UserControl
 {
     private readonly Dictionary<char, (Border KeyBorder, TextBlock Label)> _keyLookup;
+    private char? _wrongPressedKey;
+    private bool _hasActiveMissHint;
 
     public VirtualKeyboardControl()
     {
@@ -29,10 +33,43 @@ public sealed partial class VirtualKeyboardControl : UserControl
         };
     }
 
+    public void ShowWrongKeyFeedback(char pressedChar, char expectedChar, string? fingerHint)
+    {
+        _wrongPressedKey = char.ToUpperInvariant(pressedChar);
+        _hasActiveMissHint = !string.IsNullOrWhiteSpace(fingerHint);
+
+        string pressedLabel = FormatKeyDisplay(pressedChar);
+        string expectedLabel = FormatKeyDisplay(expectedChar);
+        WrongKeyText.Text = $"Pressed '{pressedLabel}' — expected '{expectedLabel}'";
+        AutomationProperties.SetName(WrongKeyText, WrongKeyText.Text);
+
+        if (_hasActiveMissHint)
+        {
+            WrongKeyFingerHintText.Text = $"· {fingerHint}";
+            WrongKeyFingerHintText.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            WrongKeyFingerHintText.Text = string.Empty;
+            WrongKeyFingerHintText.Visibility = Visibility.Collapsed;
+        }
+
+        WrongKeyBanner.Visibility = Visibility.Visible;
+    }
+
+    public void ClearWrongKeyFeedback()
+    {
+        _wrongPressedKey = null;
+        _hasActiveMissHint = false;
+        WrongKeyBanner.Visibility = Visibility.Collapsed;
+        WrongKeyFingerHintText.Visibility = Visibility.Collapsed;
+    }
+
     public void UpdateState(
         char activeTargetKey,
         IReadOnlyDictionary<char, KeyMetric> keyMetrics,
-        KeyboardColorMode colorMode)
+        KeyboardColorMode colorMode,
+        KeyboardFadeStage fadeStage = KeyboardFadeStage.FullLabels)
     {
         string themeKey = ActualTheme == ElementTheme.Light ? "Light" : "Dark";
         var dict = Application.Current.Resources.ThemeDictionaries[themeKey] as ResourceDictionary;
@@ -41,12 +78,19 @@ public sealed partial class VirtualKeyboardControl : UserControl
             return;
         }
 
+        bool showRows = fadeStage != KeyboardFadeStage.Hidden || _hasActiveMissHint;
+        KeyboardRowsPanel.Visibility = showRows ? Visibility.Visible : Visibility.Collapsed;
+
+        bool hideLabels = fadeStage == KeyboardFadeStage.UnlabeledWithBumps && !_hasActiveMissHint;
         char upperTarget = char.ToUpperInvariant(activeTargetKey);
         var neutralFill = (Brush)dict["ForgeKeyNeutralBrush"];
         var neutralBorder = (Brush)dict["ForgeKeyNeutralBorderBrush"];
         var mutedText = (Brush)dict["ForgeTextMutedBrush"];
         var purpleBrush = (Brush)dict["ForgePurpleBrush"];
         var purpleFill = (Brush)dict["ForgePillSelectedBrush"];
+        var redFill = (Brush)dict["ForgeRedFillBrush"];
+        var redBorder = (Brush)dict["ForgeRedBorderBrush"];
+        var redBrush = (Brush)dict["ForgeRedBrush"];
 
         foreach (KeyValuePair<char, (Border KeyBorder, TextBlock Label)> kvp in _keyLookup)
         {
@@ -55,11 +99,22 @@ public sealed partial class VirtualKeyboardControl : UserControl
             TextBlock label = kvp.Value.Label;
             KeyMetric? metric = ResolveCaseCombinedMetric(keyChar, keyMetrics);
 
+            label.Opacity = hideLabels ? 0.0 : 1.0;
+
             string tipText = metric is not null && metric.TotalKeystrokes > 0
                 ? $"{(keyChar == ' ' ? "Space" : keyChar)} · {metric.AccuracyPercentage:0.0}% acc · {metric.AverageLatencyMs:0} ms · {metric.TotalKeystrokes} strokes"
                 : $"{(keyChar == ' ' ? "Space" : keyChar)} · No samples recorded yet";
             ToolTipService.SetToolTip(border, tipText);
-            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(border, tipText);
+            AutomationProperties.SetName(border, tipText);
+
+            if (_wrongPressedKey.HasValue && keyChar == _wrongPressedKey.Value && keyChar != upperTarget)
+            {
+                border.Background = redFill;
+                border.BorderBrush = redBorder;
+                border.BorderThickness = new Thickness(1.75);
+                label.Foreground = redBrush;
+                continue;
+            }
 
             if (keyChar == upperTarget)
             {
@@ -95,9 +150,9 @@ public sealed partial class VirtualKeyboardControl : UserControl
                 }
                 else
                 {
-                    border.Background = (Brush)dict["ForgeRedFillBrush"];
-                    border.BorderBrush = (Brush)dict["ForgeRedBorderBrush"];
-                    label.Foreground = (Brush)dict["ForgeRedBrush"];
+                    border.Background = redFill;
+                    border.BorderBrush = redBorder;
+                    label.Foreground = redBrush;
                 }
             }
             else
@@ -108,9 +163,9 @@ public sealed partial class VirtualKeyboardControl : UserControl
             }
         }
 
-        if (colorMode == KeyboardColorMode.FingerZones)
+        if (colorMode == KeyboardColorMode.FingerZones && showRows)
         {
-            FingerHintText.Text = $"Finger guide: {GetFingerName(upperTarget)}";
+            FingerHintText.Text = $"Finger guide: {FingerMap.GetDisplayName(FingerMap.GetFinger(upperTarget))}";
             FingerHintText.Visibility = Visibility.Visible;
         }
         else
@@ -118,6 +173,14 @@ public sealed partial class VirtualKeyboardControl : UserControl
             FingerHintText.Visibility = Visibility.Collapsed;
         }
     }
+
+    private static string FormatKeyDisplay(char ch) => ch switch
+    {
+        ' ' => "Space",
+        '\t' => "Tab",
+        '\n' or '\r' => "Enter",
+        _ => char.ToUpperInvariant(ch).ToString()
+    };
 
     private static KeyMetric? ResolveCaseCombinedMetric(char upperOrSymbolKey, IReadOnlyDictionary<char, KeyMetric> metrics)
     {
@@ -170,18 +233,4 @@ public sealed partial class VirtualKeyboardControl : UserControl
             new SolidColorBrush(Color.FromArgb(0x40, 0xFF, 0xFF, 0xFF)),
             new SolidColorBrush(Color.FromArgb(0xFF, 0xD4, 0xD4, 0xD8)));
     }
-
-    private static string GetFingerName(char ch) => ch switch
-    {
-        ' ' => "Thumb (Spacebar)",
-        'Q' or 'A' or 'Z' => "Left Pinky",
-        'W' or 'S' or 'X' => "Left Ring",
-        'E' or 'D' or 'C' => "Left Middle",
-        'R' or 'T' or 'F' or 'G' or 'V' or 'B' => "Left Index",
-        'Y' or 'U' or 'H' or 'J' or 'N' or 'M' => "Right Index",
-        'I' or 'K' or ',' => "Right Middle",
-        'O' or 'L' or '.' => "Right Ring",
-        'P' or ';' or '\'' or '/' => "Right Pinky",
-        _ => "Home Row Position"
-    };
 }

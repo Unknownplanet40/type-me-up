@@ -18,7 +18,7 @@ public sealed class DomainModelsTests
         Assert.False(settings.StopOnError);
         Assert.Equal(AdaptiveDifficultyProfile.Standard, settings.AdaptiveProfile);
         Assert.Equal(AdaptiveWordMode.PhoneticPseudoWords, settings.AdaptiveWordMode);
-        Assert.Equal(30, settings.DailyGoalMinutes);
+        Assert.Equal(15, settings.DailyGoalMinutes);
     }
 
     [Theory]

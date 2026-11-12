@@ -38,3 +38,21 @@
 - [Decision] Multi-Track Course Catalog: Upgraded from single flat 7-level list to 4 selectable tracks (`Fast Touch Typing Course` 12 lessons, `Speed Building Course`, `Numbers Course`, `Special Marks Course`) accessible via a Course Switcher view/drawer in TypeForge dark/purple styling.
 - [Decision] Lesson Sub-Steps & Optimal Duration: Each course lesson uses numbered tabs (`1..N`) and sequential checklist steps (`Tip`, `NewKeys`, `KeyDrill`, `WordDrill`, `ParagraphDrill`) with inline Tip cards, checkmarks, bottom course progress bar, and an `Optimal Duration` toggle (~50% shortened drill length when prior accuracy >= 96% and WPM target met).
 - [Decision] Benchmark Statistics Tabs & Certificate Export: Statistics view features `Typing Speed` (Gross & Net WPM bar charts with `OK`/`Good`/`Very good` benchmark bands) and `Accuracy` (Accuracy bar chart vs `94%` Goal line + sorted `Difficult Keys` chart with `OK`/`Difficult`/`Problematic` bands), paired with interactive QWERTY Heatmap and `RenderTargetBitmap` PNG Progress Report / Certificate export.
+
+
+## 2026-11-12 Learning-Speed Improvement Plan
+- [Decision] Add a learning engine in Core: bigram latency tracking, weighted weak-key/bigram drills, spaced key review, placement test, and a "Today's Session" planner.
+- [Decision] Course UX: finger guide default-on in Course (shown in Course right panel and alongside Virtual Keyboard during CourseLesson drills), accuracy-first early lessons, keyboard fade ramp, wrong-key hints in strict mode.
+- [Decision] Today's Session handles Course Tip steps by showing the tip text in a compact banner above the next drill and auto-completing the Tip step when the drill finishes.
+- [Decision] First-launch placement triggers automatically only when both PlacementResults and Sessions are empty (brand-new users), with retake available in Settings.
+- [Decision] Speed tools: pace caret (Off / Fixed / Personal Best / Last session) configured in shared TypingSettingsControl and SettingsPage, fatigue-based break suggestion, one-insight results screen, and Real-world pools radio option in Test -> Text tab.
+- [Decision] New installs default to a 15-minute daily goal; existing users keep their value.
+- [Decision] "Optimal Duration" renamed "Skip ahead when mastered" (setting key unchanged).
+- [Rejected] Any system-wide key capture for these features; pressed-wrong-key values are never persisted.
+
+## 2026-11-12 Brand Assets
+- [Decision] 8 Gemini-generated assets adopted (icon, lockup, splash, welcome hero, 3 empty states, break reminder); certificate art dropped with the certificate feature.
+- [Decision] Assets are processed by tools/assets/build_assets.py from assets-raw/ into src/TypeForge.App/Assets/: per-size icon crops, brightness-keyed transparent illustrations, MSIX tile/splash sizes, 7-frame ICO.
+- [Decision] Empty-state copy and asset stems live in Core (EmptyStateCatalog) with tests; the app renders them through one EmptyStateView control.
+- [Decision] Illustrations are dark-only; Light theme shows them on a dark panel until light variants exist.
+- [Rejected] Blur-based background cleanup (erased hairlines and thinned the wordmark).

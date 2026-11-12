@@ -81,14 +81,17 @@ public sealed partial class TestPage : Page
         ViewModel.SnapshotUpdated += OnSnapshotUpdated;
         ViewModel.AppearanceUpdated += ApplyStreamAppearance;
         ViewModel.ParagraphPreviewsUpdated += RenderParagraphPreviews;
+        ViewModel.PoolPreviewsUpdated += RenderPoolPreviews;
 
         ApplyStreamAppearance();
         UpdateModeBarVisuals();
         RenderParagraphPreviews();
+        RenderPoolPreviews();
 
         if (ViewModel.CurrentSnapshot is not null)
         {
             TestStreamView.RenderSnapshot(ViewModel.CurrentSnapshot);
+            TestStreamView.UpdatePaceCaret(ViewModel.GhostCaretIndex, ViewModel.IsPaceCaretVisible);
         }
 
         _hudTimer.Start();
@@ -103,6 +106,7 @@ public sealed partial class TestPage : Page
         ViewModel.SnapshotUpdated -= OnSnapshotUpdated;
         ViewModel.AppearanceUpdated -= ApplyStreamAppearance;
         ViewModel.ParagraphPreviewsUpdated -= RenderParagraphPreviews;
+        ViewModel.PoolPreviewsUpdated -= RenderPoolPreviews;
     }
 
     private void PopulateStaticComboBoxes()
@@ -122,6 +126,12 @@ public sealed partial class TestPage : Page
         foreach (string title in ViewModel.BookTitles)
         {
             ComboBook.Items.Add(new ComboBoxItem { Content = title });
+        }
+
+        ComboRealWorldPool.Items.Clear();
+        foreach (string poolTitle in ViewModel.PoolTitles)
+        {
+            ComboRealWorldPool.Items.Add(new ComboBoxItem { Content = poolTitle });
         }
     }
 
@@ -204,9 +214,82 @@ public sealed partial class TestPage : Page
         }
     }
 
+    private void RenderPoolPreviews()
+    {
+        if (RealWorldPoolPreviewsPanel is null)
+        {
+            return;
+        }
+
+        string themeKey = ActualTheme == ElementTheme.Light ? "Light" : "Dark";
+        ResourceDictionary? dict = Application.Current.Resources.ThemeDictionaries[themeKey] as ResourceDictionary;
+        Brush? cardBrush = dict?["ForgeCardBrush"] as Brush;
+        Brush? hairline = dict?["ForgeHairlineBrush"] as Brush;
+        Brush? primary = dict?["ForgeTextPrimaryBrush"] as Brush;
+        Brush? secondary = dict?["ForgeTextSecondaryBrush"] as Brush;
+
+        RealWorldPoolPreviewsPanel.Children.Clear();
+        for (int i = 0; i < ViewModel.PoolPreviewItems.Count; i++)
+        {
+            string sample = ViewModel.PoolPreviewItems[i];
+            var row = new Grid { ColumnSpacing = 10 };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(36) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+            var numBlock = new TextBlock
+            {
+                Text = $"#{i + 1}",
+                FontSize = 11,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            if (secondary is not null)
+            {
+                numBlock.Foreground = secondary;
+            }
+
+            var txtBlock = new TextBlock
+            {
+                Text = sample,
+                FontSize = 12,
+                FontFamily = new FontFamily("Cascadia Mono, Consolas"),
+                TextWrapping = TextWrapping.Wrap
+            };
+            if (primary is not null)
+            {
+                txtBlock.Foreground = primary;
+            }
+
+            Grid.SetColumn(numBlock, 0);
+            Grid.SetColumn(txtBlock, 1);
+            row.Children.Add(numBlock);
+            row.Children.Add(txtBlock);
+
+            var border = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(10, 7, 10, 7),
+                Child = row
+            };
+            if (cardBrush is not null && hairline is not null)
+            {
+                border.Background = cardBrush;
+                border.BorderBrush = hairline;
+            }
+
+            RealWorldPoolPreviewsPanel.Children.Add(border);
+        }
+    }
+
+    private string? _lastTestTargetText;
+
     private void OnSnapshotUpdated(TypingSnapshot snapshot)
     {
+        _lastTestTargetText = snapshot.TargetText;
         TestStreamView.RenderSnapshot(snapshot);
+        TestStreamView.UpdatePaceCaret(ViewModel.GhostCaretIndex, ViewModel.IsPaceCaretVisible);
+        UpdateCapsLockWarning(snapshot.TargetText);
     }
 
     private void ApplyStreamAppearance()
@@ -256,6 +339,7 @@ public sealed partial class TestPage : Page
             RadioCommonWords.IsChecked = ViewModel.DraftTextSource == TestTextSource.CommonWords;
             RadioPseudoWords.IsChecked = ViewModel.DraftTextSource == TestTextSource.PseudoWords;
             RadioBookParagraphs.IsChecked = ViewModel.DraftTextSource == TestTextSource.BookParagraphs;
+            RadioRealWorldPools.IsChecked = ViewModel.DraftTextSource == TestTextSource.RealWorldPools;
             RadioCustomText.IsChecked = ViewModel.DraftTextSource == TestTextSource.CustomText;
             UpdateTextSourceSubPanels();
 
@@ -263,6 +347,7 @@ public sealed partial class TestPage : Page
 
             SwitchSettingsTab(0);
             RenderParagraphPreviews();
+            RenderPoolPreviews();
         }
         finally
         {
@@ -322,6 +407,7 @@ public sealed partial class TestPage : Page
         CommonWordsPanel.Visibility = ViewModel.DraftTextSource == TestTextSource.CommonWords ? Visibility.Visible : Visibility.Collapsed;
         PseudoWordsPanel.Visibility = ViewModel.DraftTextSource == TestTextSource.PseudoWords ? Visibility.Visible : Visibility.Collapsed;
         BookParagraphsPanel.Visibility = ViewModel.DraftTextSource == TestTextSource.BookParagraphs ? Visibility.Visible : Visibility.Collapsed;
+        RealWorldPoolsPanel.Visibility = ViewModel.DraftTextSource == TestTextSource.RealWorldPools ? Visibility.Visible : Visibility.Collapsed;
         CustomTextPanel.Visibility = ViewModel.DraftTextSource == TestTextSource.CustomText ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -402,9 +488,23 @@ public sealed partial class TestPage : Page
 
     private void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        if (e.Key == VirtualKey.CapitalLock)
+        {
+            DispatcherQueue.TryEnqueue(() => UpdateCapsLockWarning(_lastTestTargetText));
+        }
+
         if (HandleKeyDownInput(e.Key))
         {
             e.Handled = true;
         }
+    }
+
+    private void UpdateCapsLockWarning(string? targetText)
+    {
+        bool isCapsLockOn = (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.CapitalLock)
+            & Windows.UI.Core.CoreVirtualKeyStates.Locked) != 0;
+        CapsLockWarningBanner.Visibility = CapsLockGuard.ShouldShowWarning(isCapsLockOn, targetText)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 }

@@ -20,21 +20,56 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- 1. Quiet Metrics Line + Far-Right Daily Goal Bar -->
+            <!-- 1. Quiet Metrics Line + Start Today's Session Action + Far-Right Daily Goal Bar -->
             <Grid Grid.Row="0" HorizontalAlignment="Stretch" Padding="0,4,0,6">
                 <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Left" VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind ViewModel.WpmText, Mode=OneWay}" FontSize="13" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" Opacity="0.86" />
-                    <TextBlock Text="·" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    <TextBlock
+                        Text="{x:Bind ViewModel.WpmText, Mode=OneWay}"
+                        Visibility="{x:Bind ViewModel.ShowWpmMetric, Mode=OneWay}"
+                        FontSize="13"
+                        FontWeight="Medium"
+                        Foreground="{ThemeResource ForgeTextPrimaryBrush}"
+                        Opacity="0.86" />
+                    <TextBlock
+                        Text="·"
+                        Visibility="{x:Bind ViewModel.ShowWpmMetric, Mode=OneWay}"
+                        FontSize="13"
+                        Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     <TextBlock Text="{x:Bind ViewModel.AccuracyText, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     <TextBlock Text="·" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     <TextBlock Text="{x:Bind ViewModel.MistakesText, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     <TextBlock Text="·" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     <TextBlock Text="{x:Bind ViewModel.ElapsedText, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    <!-- Screen-reader live announcer for target key and finger hint -->
+                    <TextBlock
+                        x:Name="TargetKeyLiveAnnouncer"
+                        Width="1"
+                        Height="1"
+                        Opacity="0"
+                        IsHitTestVisible="False"
+                        AutomationProperties.LiveSetting="Polite" />
                 </StackPanel>
+
+                <Button
+                    x:Name="BtnStartTodaysSession"
+                    Visibility="{x:Bind ViewModel.CanStartTodaysSession, Mode=OneWay}"
+                    AllowFocusOnInteraction="False"
+                    Style="{StaticResource ForgePrimaryButtonStyle}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Padding="14,5"
+                    AutomationProperties.Name="Start Today's Session"
+                    Click="BtnStartTodaysSession_Click">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon Glyph="&#xE768;" FontSize="11" />
+                        <TextBlock Text="Start Today's Session" FontSize="12" FontWeight="SemiBold" />
+                    </StackPanel>
+                </Button>
 
                 <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <TextBlock Text="{x:Bind ViewModel.DailyGoalText, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
@@ -45,7 +80,7 @@
             </Grid>
 
             <!-- 2. Letter Mastery Pill Strip + Hover Controls -->
-            <Grid Grid.Row="1" Margin="0,12,0,0" HorizontalAlignment="Stretch">
+            <Grid Grid.Row="1" Margin="0,10,0,0" HorizontalAlignment="Stretch">
                 <StackPanel x:Name="KeyPillsPanel" Orientation="Horizontal" Spacing="5" HorizontalAlignment="Center" VerticalAlignment="Center" />
 
                 <StackPanel
@@ -73,21 +108,203 @@
                 </StackPanel>
             </Grid>
 
-            <!-- 3. Static Start-Aligned Live Typing Stream with Moving Cursor Indicator -->
+            <!-- 3. Course Breadcrumb Header, Today's Session Strip & Preceding Course Tip Banner -->
+            <StackPanel Grid.Row="2" Spacing="8" Margin="0,10,0,0" MaxWidth="920" HorizontalAlignment="Stretch">
+                <Border
+                    Visibility="{x:Bind ViewModel.IsCourseLessonMode, Mode=OneWay}"
+                    Background="{ThemeResource ForgeCardInnerBrush}"
+                    BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="12,6">
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button
+                            Grid.Column="0"
+                            AllowFocusOnInteraction="False"
+                            Style="{StaticResource ForgeSubtleIconButtonStyle}"
+                            Padding="8,4"
+                            Command="{x:Bind ViewModel.BackToCourseCommand}"
+                            AutomationProperties.Name="Back to Course">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon Glyph="&#xE72B;" FontSize="11" />
+                                <TextBlock Text="Back to Course" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock
+                            Grid.Column="1"
+                            Text="{x:Bind ViewModel.CourseBreadcrumbText, Mode=OneWay}"
+                            FontSize="12"
+                            FontWeight="Medium"
+                            Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Right"
+                            TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                </Border>
+                <Border
+                    Visibility="{x:Bind ViewModel.IsDailyPlanActive, Mode=OneWay}"
+                    Background="{ThemeResource ForgeCardInnerBrush}"
+                    BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,8">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock
+                            Grid.Column="0"
+                            Text="{x:Bind ViewModel.DailyPlanStepLabel, Mode=OneWay}"
+                            FontSize="12"
+                            FontWeight="Medium"
+                            Foreground="{ThemeResource ForgeTextPrimaryBrush}"
+                            VerticalAlignment="Center"
+                            TextTrimming="CharacterEllipsis" />
+                        <ProgressBar
+                            Grid.Column="1"
+                            Minimum="0"
+                            Maximum="1"
+                            Value="{x:Bind ViewModel.DailyPlanProgress, Mode=OneWay}"
+                            Height="5"
+                            Foreground="{ThemeResource ForgePurpleBrush}"
+                            VerticalAlignment="Center" />
+                        <Button
+                            Grid.Column="2"
+                            Content="Exit Plan"
+                            AllowFocusOnInteraction="False"
+                            Style="{StaticResource ForgeSubtleIconButtonStyle}"
+                            FontSize="11"
+                            Padding="8,3"
+                            Click="BtnCancelDailyPlan_Click" />
+                    </Grid>
+                </Border>
+
+                <Border
+                    Visibility="{x:Bind ViewModel.HasTipBanner, Mode=OneWay}"
+                    Background="{ThemeResource ForgeCardInnerBrush}"
+                    BorderBrush="{ThemeResource ForgePurpleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,8">
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Grid.Column="0" Glyph="&#xE82F;" FontSize="13" Foreground="{ThemeResource ForgePurpleBrush}" VerticalAlignment="Center" />
+                        <TextBlock
+                            Grid.Column="1"
+                            Text="{x:Bind ViewModel.TipBannerText, Mode=OneWay}"
+                            FontSize="12"
+                            Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                            TextWrapping="Wrap"
+                            VerticalAlignment="Center" />
+                    </Grid>
+                </Border>
+
+                <!-- Caps Lock Warning Banner (shown only on lowercase-only prompts) -->
+                <Border
+                    x:Name="CapsLockWarningBanner"
+                    Visibility="Collapsed"
+                    Background="{ThemeResource ForgeYellowFillBrush}"
+                    BorderBrush="{ThemeResource ForgeYellowBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,7"
+                    HorizontalAlignment="Center"
+                    AutomationProperties.LiveSetting="Polite">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE7BA;" FontSize="13" Foreground="{ThemeResource ForgeYellowBrush}" VerticalAlignment="Center" />
+                        <TextBlock
+                            Text="Caps Lock is on — turn it off for lowercase letters."
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="{ThemeResource ForgeYellowBrush}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Quiet Non-Modal Fatigue Break Suggestion Banner (with break-reminder illustration) -->
+                <Border
+                    x:Name="FatigueBreakBanner"
+                    Visibility="{x:Bind ViewModel.IsFatigueBannerVisible, Mode=OneWay}"
+                    Background="{ThemeResource ForgeCardInnerBrush}"
+                    BorderBrush="{ThemeResource ForgePurpleBrush}"
+                    BorderThickness="1"
+                    CornerRadius="10"
+                    Padding="12,8">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Background="#0D0D0D" CornerRadius="8" Padding="6" VerticalAlignment="Center">
+                            <Image
+                                Source="ms-appx:///Assets/Illustrations/break-reminder.png"
+                                Width="42"
+                                Height="42"
+                                Stretch="Uniform"
+                                AutomationProperties.AccessibilityView="Raw" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                            <TextBlock
+                                Text="Time for a short break"
+                                FontSize="12"
+                                FontWeight="SemiBold"
+                                Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock
+                                Text="{x:Bind ViewModel.FatigueBannerText, Mode=OneWay}"
+                                FontSize="12"
+                                Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                                TextWrapping="Wrap"
+                                AutomationProperties.LiveSetting="Polite" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="2"
+                            Content="Keep typing"
+                            AllowFocusOnInteraction="False"
+                            Style="{StaticResource ForgeSecondaryButtonStyle}"
+                            FontSize="11"
+                            Padding="10,4"
+                            VerticalAlignment="Center"
+                            Click="BtnDismissFatigue_Click"
+                            AutomationProperties.Name="Keep typing and dismiss break suggestion" />
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <!-- 4. Static Start-Aligned Live Typing Stream with Moving Cursor Indicator -->
             <controls:TypingStreamView
                 x:Name="StreamView"
-                Grid.Row="2"
+                Grid.Row="3"
                 VerticalAlignment="Center"
                 HorizontalAlignment="Stretch"
                 MaxWidth="920"
                 Padding="24,16" />
 
-            <!-- 4. Live Virtual QWERTY Keyboard -->
-            <controls:VirtualKeyboardControl
-                x:Name="VirtualKeyboard"
-                Grid.Row="3"
+            <!-- 5. Live Virtual QWERTY Keyboard + Ergonomic Finger Guide -->
+            <StackPanel
+                Grid.Row="4"
+                Orientation="Horizontal"
+                Spacing="18"
                 HorizontalAlignment="Center"
-                Margin="0,4,0,8" />
+                VerticalAlignment="Bottom"
+                Margin="0,4,0,8">
+                <controls:VirtualKeyboardControl
+                    x:Name="VirtualKeyboard"
+                    VerticalAlignment="Center" />
+                <controls:FingerGuideControl
+                    x:Name="PracticeFingerGuide"
+                    Visibility="{x:Bind ViewModel.ShowFingerGuide, Mode=OneWay}"
+                    VerticalAlignment="Center" />
+            </StackPanel>
         </Grid>
 
         <!-- Post-Session Results Overlay -->
@@ -101,23 +318,39 @@
                 BorderThickness="1"
                 CornerRadius="14"
                 Padding="28"
-                Width="520"
+                MinWidth="580"
+                MaxWidth="660"
+                Margin="24"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
                 <StackPanel Spacing="18">
                     <StackPanel Spacing="4" HorizontalAlignment="Center">
-                        <TextBlock Text="Session Complete" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" HorizontalAlignment="Center" />
+                        <TextBlock Text="{x:Bind ViewModel.ResultsHeading, Mode=OneWay}" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" HorizontalAlignment="Center" />
                         <TextBlock Text="{x:Bind ViewModel.PromptTitle, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                        <TextBlock
+                            Visibility="{x:Bind ViewModel.IsCourseLessonMode, Mode=OneWay}"
+                            Text="{x:Bind ViewModel.CourseResultsSummaryText, Mode=OneWay}"
+                            FontSize="12"
+                            Foreground="{ThemeResource ForgeTextPrimaryBrush}"
+                            HorizontalAlignment="Center"
+                            TextAlignment="Center"
+                            TextWrapping="Wrap" />
                         <TextBlock Text="{x:Bind ViewModel.ResultStarsDisplay, Mode=OneWay}" FontSize="20" Foreground="{ThemeResource ForgeYellowBrush}" HorizontalAlignment="Center" Margin="0,4,0,0" />
                     </StackPanel>
 
                     <Grid ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Border Grid.Column="0" Background="{ThemeResource ForgeCardInnerBrush}" CornerRadius="8" Padding="12">
+                        <Border
+                            Grid.Column="0"
+                            Visibility="{x:Bind ViewModel.ShowWpmMetric, Mode=OneWay}"
+                            MinWidth="142"
+                            Background="{ThemeResource ForgeCardInnerBrush}"
+                            CornerRadius="8"
+                            Padding="12">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock Text="{x:Bind ViewModel.ResultWpm, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" />
                                 <TextBlock Text="Net WPM" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
@@ -137,6 +370,17 @@
                         </Border>
                     </Grid>
 
+                    <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Visibility="{x:Bind ViewModel.ShowWpmMetric, Mode=OneWay}">
+                            <TextBlock Text="Raw WPM:" FontSize="12" Foreground="{ThemeResource ForgeTextMutedBrush}" />
+                            <TextBlock Text="{x:Bind ViewModel.ResultRawWpm, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Consistency:" FontSize="12" Foreground="{ThemeResource ForgeTextMutedBrush}" />
+                            <TextBlock Text="{x:Bind ViewModel.ResultConsistency, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+
                     <TextBlock
                         Text="{x:Bind ViewModel.ResultWeakKeysSummary, Mode=OneWay}"
                         FontSize="12"
@@ -144,15 +388,227 @@
                         TextWrapping="Wrap"
                         HorizontalAlignment="Center" />
 
-                    <Grid ColumnSpacing="10">
+                    <!-- InsightEngine Coaching Card (One Primary Insight + One Recommended Action) -->
+                    <Border
+                        Background="{ThemeResource ForgeCardInnerBrush}"
+                        BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="14,10">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="SESSION INSIGHT" FontSize="10" FontWeight="SemiBold" CharacterSpacing="50" Foreground="{ThemeResource ForgePurpleBrush}" />
+                                <TextBlock
+                                    Text="{x:Bind ViewModel.ResultInsightText, Mode=OneWay}"
+                                    FontSize="12"
+                                    Foreground="{ThemeResource ForgeTextPrimaryBrush}"
+                                    TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button
+                                Grid.Column="1"
+                                Content="{x:Bind ViewModel.ResultInsightActionLabel, Mode=OneWay}"
+                                Style="{StaticResource ForgePrimaryButtonStyle}"
+                                Padding="14,7"
+                                VerticalAlignment="Center"
+                                Click="BtnInsightAction_Click" />
+                        </Grid>
+                    </Border>
+
+                    <Grid
+                        Visibility="{x:Bind ViewModel.IsCourseLessonMode, Mode=OneWay}"
+                        ColumnSpacing="8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="1.2*" />
+                        </Grid.ColumnDefinitions>
+                        <Button
+                            Grid.Column="0"
+                            Content="Back to Course"
+                            Padding="14,8"
+                            Style="{StaticResource ForgeSecondaryButtonStyle}"
+                            Command="{x:Bind ViewModel.BackToCourseCommand}" />
+                        <Button
+                            Grid.Column="1"
+                            Content="{x:Bind ViewModel.CourseResultsSecondaryLabel, Mode=OneWay}"
+                            Style="{StaticResource ForgeSecondaryButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            Command="{x:Bind ViewModel.RepeatCourseLessonCommand}" />
+                        <Button
+                            Grid.Column="2"
+                            Content="{x:Bind ViewModel.CourseResultsPrimaryLabel, Mode=OneWay}"
+                            IsEnabled="{x:Bind ViewModel.CanContinueCourseExercise, Mode=OneWay}"
+                            Style="{StaticResource ForgePrimaryButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            Command="{x:Bind ViewModel.ContinueCourseFlowCommand}" />
+                    </Grid>
+
+                    <StackPanel
+                        Visibility="{x:Bind ViewModel.IsStandardPracticeMode, Mode=OneWay}"
+                        Spacing="8"
+                        HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                            <Button Content="Review Weak Keys" Padding="14,8" Style="{StaticResource ForgeSecondaryButtonStyle}" Click="BtnReviewWeakKeys_Click" />
+                            <Button Content="Drill Slowest Pairs" Padding="14,8" Style="{StaticResource ForgeSecondaryButtonStyle}" Click="BtnDrillSlowestPairs_Click" />
+                            <Button Content="Next Drill" Padding="16,8" Style="{StaticResource ForgeSecondaryButtonStyle}" Click="BtnNextDrill_Click" />
+                            <Button Content="Repeat" Padding="16,8" Style="{StaticResource ForgeSecondaryButtonStyle}" Click="BtnRepeat_Click" />
+                        </StackPanel>
+                        <Button
+                            Visibility="{x:Bind ViewModel.HasMissedWords, Mode=OneWay}"
+                            Content="Practice Missed Words"
+                            Padding="16,7"
+                            HorizontalAlignment="Center"
+                            Style="{StaticResource ForgeSecondaryButtonStyle}"
+                            Command="{x:Bind ViewModel.PracticeMissedWordsCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- First-Launch Placement Welcome Overlay (with hero-welcome illustration & 900px responsive layout) -->
+        <Grid
+            x:Name="PlacementWelcomeOverlay"
+            Visibility="{x:Bind ViewModel.IsPlacementWelcomeVisible, Mode=OneWay}"
+            SizeChanged="PlacementWelcomeOverlay_SizeChanged"
+            Background="#BC000000">
+            <Border
+                x:Name="PracticePlacementHeroCard"
+                Background="{ThemeResource ForgeCardBrush}"
+                BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                BorderThickness="1"
+                CornerRadius="14"
+                Padding="28"
+                MaxWidth="820"
+                Margin="24"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <Grid ColumnSpacing="24" RowSpacing="18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="PracticeHeroTextCol" Width="320" />
+                        <ColumnDefinition x:Name="PracticeHeroArtCol" Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Border
+                        x:Name="PracticeHeroArtPanel"
+                        Grid.Column="1"
+                        Grid.Row="0"
+                        Background="#0D0D0D"
+                        CornerRadius="12"
+                        Padding="8"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                        <Image
+                            Source="ms-appx:///Assets/Illustrations/hero-welcome.png"
+                            MaxWidth="420"
+                            Stretch="Uniform"
+                            AutomationProperties.AccessibilityView="Raw" />
+                    </Border>
+
+                    <StackPanel
+                        x:Name="PracticeHeroTextStack"
+                        Grid.Column="0"
+                        Grid.Row="0"
+                        Spacing="14"
+                        VerticalAlignment="Center">
+                        <TextBlock Text="Welcome to TypeForge" FontSize="22" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                        <TextBlock
+                            Text="Take a quick 60-second placement check so TypeForge can recommend the right starting lesson and unlock the keys you already know."
+                            FontSize="13"
+                            Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                            TextWrapping="Wrap"
+                            LineHeight="20" />
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Button
+                                Content="Start 60-Second Check"
+                                Style="{StaticResource ForgePrimaryButtonStyle}"
+                                AutomationProperties.Name="Start 60-second placement check"
+                                Click="BtnStartPlacement_Click" />
+                            <Button
+                                Content="Skip to Lesson 1"
+                                Style="{StaticResource ForgeSecondaryButtonStyle}"
+                                AutomationProperties.Name="Skip placement and start Lesson 1"
+                                Click="BtnSkipPlacement_Click" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Placement Result & Recommendation Overlay -->
+        <Grid
+            x:Name="PlacementResultOverlay"
+            Visibility="{x:Bind ViewModel.IsPlacementResultVisible, Mode=OneWay}"
+            Background="#BC000000">
+            <Border
+                Background="{ThemeResource ForgeCardBrush}"
+                BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                BorderThickness="1"
+                CornerRadius="14"
+                Padding="28"
+                MinWidth="580"
+                MaxWidth="660"
+                Margin="24"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+                <StackPanel Spacing="18">
+                    <StackPanel Spacing="4" HorizontalAlignment="Center">
+                        <TextBlock Text="Placement Complete" FontSize="20" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" HorizontalAlignment="Center" />
+                        <TextBlock Text="Recommended Starting Path" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="Review Weak Keys" Padding="16,8" Style="{StaticResource ForgePrimaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnReviewWeakKeys_Click" />
-                        <Button Grid.Column="1" Content="Next Drill" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnNextDrill_Click" />
-                        <Button Grid.Column="2" Content="Repeat" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnRepeat_Click" />
+                        <Border Grid.Column="0" Background="{ThemeResource ForgeCardInnerBrush}" CornerRadius="8" Padding="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.PlacementResultWpm, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Net WPM" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Background="{ThemeResource ForgeCardInnerBrush}" CornerRadius="8" Padding="12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{x:Bind ViewModel.PlacementResultAccuracy, Mode=OneWay}" FontSize="22" FontWeight="Bold" Foreground="{ThemeResource ForgeGreenBrush}" HorizontalAlignment="Center" />
+                                <TextBlock Text="Accuracy" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" HorizontalAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgePurpleBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10">
+                        <TextBlock
+                            Text="{x:Bind ViewModel.PlacementRecommendedSummary, Mode=OneWay}"
+                            FontSize="13"
+                            Foreground="{ThemeResource ForgeTextPrimaryBrush}"
+                            TextWrapping="Wrap"
+                            LineHeight="19" />
+                    </Border>
+
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button
+                            Grid.Column="0"
+                            Content="Start Here"
+                            Style="{StaticResource ForgePrimaryButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            Click="BtnAcceptPlacement_Click" />
+                        <Button
+                            Grid.Column="1"
+                            Content="Pick Myself"
+                            Style="{StaticResource ForgeSecondaryButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            Click="BtnPickCourseMyself_Click" />
                     </Grid>
                 </StackPanel>
             </Border>

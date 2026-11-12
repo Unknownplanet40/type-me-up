@@ -181,6 +181,40 @@ public static class TestTextGenerator
     }
 
     /// <summary>
+    /// Generates a test passage from a <see cref="RealWorldPoolModel"/> totaling at least <paramref name="targetCharCount"/> characters.
+    /// </summary>
+    public static string GenerateRealWorldPoolPrompt(
+        RealWorldPoolModel pool,
+        int targetCharCount,
+        Random? rng = null)
+    {
+        ArgumentNullException.ThrowIfNull(pool);
+        if (pool.Items.Count == 0)
+        {
+            throw new ArgumentException("Real-world pool cannot be empty.", nameof(pool));
+        }
+
+        rng ??= Random.Shared;
+        int minChars = Math.Clamp(targetCharCount, 60, 6000);
+        var segments = new List<string>();
+        int currentChars = 0;
+
+        while (currentChars < minChars)
+        {
+            string item = pool.Items[rng.Next(pool.Items.Count)];
+            if (segments.Count > 0 && segments[^1].Equals(item, StringComparison.Ordinal) && pool.Items.Count > 1)
+            {
+                item = pool.Items[(rng.Next(pool.Items.Count - 1) + 1) % pool.Items.Count];
+            }
+
+            currentChars += item.Length + (segments.Count == 0 ? 0 : 1);
+            segments.Add(item);
+        }
+
+        return string.Join(' ', segments);
+    }
+
+    /// <summary>
     /// Estimates an appropriate generated character budget for a selected test mode.
     /// </summary>
     public static int GetTargetCharactersForMode(TestDurationMode mode) => mode switch

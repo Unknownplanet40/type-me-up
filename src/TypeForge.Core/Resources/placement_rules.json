@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "diagnosticPrompt": "Touch typing builds speed and accuracy when your fingers return to the home row after every keystroke. Stay relaxed, keep your eyes on the screen, and focus on steady rhythm rather than rushing.",
+  "durationSeconds": 60,
+  "rules": [
+    {
+      "id": "advanced_speed_building",
+      "minWpm": 30.0,
+      "minAccuracy": 95.0,
+      "recommendedCourseId": "speed_building",
+      "startingUnitNumber": 1,
+      "startingExerciseId": "sb_01_01",
+      "unlockedAdaptiveStage": 13,
+      "summary": "Strong baseline speed and accuracy. Start at Speed Building Course (Lesson 1) with all 26 letters unlocked in Practice."
+    },
+    {
+      "id": "intermediate_fast_touch",
+      "minWpm": 15.0,
+      "minAccuracy": 90.0,
+      "recommendedCourseId": "fast_touch",
+      "startingUnitNumber": 6,
+      "startingExerciseId": "ft_06_01",
+      "unlockedAdaptiveStage": 6,
+      "summary": "Solid home-row foundation. Start at Fast Touch Typing Course Lesson 6 with the first 6 adaptive letter stages unlocked."
+    },
+    {
+      "id": "beginner_fast_touch",
+      "minWpm": 0.0,
+      "minAccuracy": 0.0,
+      "recommendedCourseId": "fast_touch",
+      "startingUnitNumber": 1,
+      "startingExerciseId": "ft_01_02",
+      "unlockedAdaptiveStage": 1,
+      "summary": "Start at Fast Touch Typing Course Lesson 1 (Home Row F and J) to build proper finger memory from the ground up."
+    }
+  ]
+}

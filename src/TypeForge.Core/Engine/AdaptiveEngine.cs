@@ -38,12 +38,19 @@ public static class AdaptiveEngine
     /// <summary>
     /// Creates the initial 26-letter adaptive state with only Stage 1 keys (<c>F</c>, <c>J</c>) unlocked.
     /// </summary>
-    public static IReadOnlyList<AdaptiveKeyState> CreateInitialStates()
+    public static IReadOnlyList<AdaptiveKeyState> CreateInitialStates() =>
+        CreateStatesWithUnlockedStage(1);
+
+    /// <summary>
+    /// Creates a 26-letter adaptive state list with all stages up to <paramref name="maxUnlockedStage"/> (1–13) unlocked.
+    /// </summary>
+    public static IReadOnlyList<AdaptiveKeyState> CreateStatesWithUnlockedStage(int maxUnlockedStage)
     {
+        int clampedStage = Math.Clamp(maxUnlockedStage, 1, UnlockStages.Length);
         var list = new List<AdaptiveKeyState>(26);
         for (int stageIndex = 0; stageIndex < UnlockStages.Length; stageIndex++)
         {
-            bool unlocked = stageIndex == 0;
+            bool unlocked = (stageIndex + 1) <= clampedStage;
             foreach (char ch in UnlockStages[stageIndex])
             {
                 list.Add(new AdaptiveKeyState(ch, unlocked, stageIndex + 1));
@@ -172,6 +179,303 @@ public static class AdaptiveEngine
         }
 
         return BuildPhoneticPseudoWords(allowedLower, focusPool, wordCount, random);
+    }
+
+    /// <summary>
+    /// Generates a weighted practice drill where approximately <paramref name="targetWeakRatio"/> (default 50%)
+    /// of generated words contain a top weak key or weak bigram while strictly omitting locked letters.
+    /// </summary>
+    public static string GenerateWeightedPracticeText(
+        IReadOnlySet<char> unlockedLetters,
+        IReadOnlyDictionary<char, KeyMetric> keyMetrics,
+        IReadOnlyDictionary<string, BigramMetric> bigramMetrics,
+        AdaptiveWordMode wordMode,
+        IReadOnlyList<string> dictionaryWords,
+        int wordCount = 18,
+        double targetWeakRatio = 0.50,
+        int minWeaknessSamples = WeaknessScorer.DefaultMinSamples,
+        Random? random = null)
+    {
+        ArgumentNullException.ThrowIfNull(unlockedLetters);
+        ArgumentNullException.ThrowIfNull(keyMetrics);
+        ArgumentNullException.ThrowIfNull(bigramMetrics);
+        ArgumentNullException.ThrowIfNull(dictionaryWords);
+
+        random ??= Random.Shared;
+        wordCount = Math.Max(1, wordCount);
+        targetWeakRatio = Math.Clamp(targetWeakRatio, 0.0, 1.0);
+
+        HashSet<char> allowedUpper = unlockedLetters
+            .Where(char.IsLetter)
+            .Select(char.ToUpperInvariant)
+            .ToHashSet();
+
+        if (allowedUpper.Count == 0)
+        {
+            allowedUpper.Add('F');
+            allowedUpper.Add('J');
+        }
+
+        char[] allowedLower = allowedUpper.Select(char.ToLowerInvariant).OrderBy(c => c).ToArray();
+
+        char[] weakKeysLower = WeaknessScorer.RankKeys(keyMetrics.Values, minWeaknessSamples)
+            .Where(r => allowedUpper.Contains(r.Target))
+            .Take(5)
+            .Select(r => char.ToLowerInvariant(r.Target))
+            .ToArray();
+
+        string[] weakBigramsLower = WeaknessScorer.RankBigrams(bigramMetrics.Values, minWeaknessSamples)
+            .Where(r => r.Target.Length == 2 && allowedUpper.Contains(r.Target[0]) && allowedUpper.Contains(r.Target[1]))
+            .Take(5)
+            .Select(r => r.Target.ToLowerInvariant())
+            .ToArray();
+
+        if (weakKeysLower.Length == 0 && weakBigramsLower.Length == 0)
+        {
+            return GeneratePracticeText(unlockedLetters, keyMetrics, wordMode, dictionaryWords, wordCount, random);
+        }
+
+        HashSet<char> weakKeySet = weakKeysLower.ToHashSet();
+
+        bool WordContainsWeakness(string word)
+        {
+            for (int i = 0; i < word.Length; i++)
+            {
+                if (weakKeySet.Contains(word[i]))
+                {
+                    return true;
+                }
+            }
+
+            for (int b = 0; b < weakBigramsLower.Length; b++)
+            {
+                if (word.Contains(weakBigramsLower[b], StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (wordMode == AdaptiveWordMode.NaturalDictionaryWords)
+        {
+            List<string> validDictionary = dictionaryWords
+                .Where(w => !string.IsNullOrWhiteSpace(w))
+                .Select(w => w.Trim().ToLowerInvariant())
+                .Where(w => w.All(c => allowedUpper.Contains(char.ToUpperInvariant(c))))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            List<string> weakWords = validDictionary.Where(WordContainsWeakness).ToList();
+            List<string> neutralWords = validDictionary.Where(w => !WordContainsWeakness(w)).ToList();
+
+            if (weakWords.Count > 0 && neutralWords.Count > 0)
+            {
+                var selected = new List<string>(wordCount);
+                for (int i = 0; i < wordCount; i++)
+                {
+                    bool pickWeak = random.NextDouble() < targetWeakRatio;
+                    List<string> bucket = pickWeak ? weakWords : neutralWords;
+                    selected.Add(bucket[random.Next(bucket.Count)]);
+                }
+
+                return string.Join(' ', selected);
+            }
+        }
+
+        char[] nonWeakLower = allowedLower.Where(c => !weakKeySet.Contains(c)).ToArray();
+        if (nonWeakLower.Length == 0)
+        {
+            nonWeakLower = allowedLower;
+        }
+
+        var pseudoWords = new List<string>(wordCount);
+        for (int w = 0; w < wordCount; w++)
+        {
+            bool makeWeak = random.NextDouble() < targetWeakRatio;
+            int length = allowedLower.Length <= 2 ? random.Next(3, 5) : random.Next(4, 7);
+
+            if (makeWeak)
+            {
+                var sb = new StringBuilder(length);
+                for (int i = 0; i < length; i++)
+                {
+                    sb.Append(allowedLower[random.Next(allowedLower.Length)]);
+                }
+
+                if (weakBigramsLower.Length > 0 && (weakKeysLower.Length == 0 || random.NextDouble() < 0.5))
+                {
+                    string bg = weakBigramsLower[random.Next(weakBigramsLower.Length)];
+                    int pos = random.Next(0, Math.Max(1, length - 1));
+                    sb[pos] = bg[0];
+                    if (pos + 1 < sb.Length)
+                    {
+                        sb[pos + 1] = bg[1];
+                    }
+                    else
+                    {
+                        sb.Append(bg[1]);
+                    }
+                }
+                else if (weakKeysLower.Length > 0)
+                {
+                    char wk = weakKeysLower[random.Next(weakKeysLower.Length)];
+                    int pos = random.Next(0, sb.Length);
+                    sb[pos] = wk;
+                }
+
+                pseudoWords.Add(sb.ToString());
+            }
+            else
+            {
+                var sb = new StringBuilder(length);
+                for (int i = 0; i < length; i++)
+                {
+                    char candidate = nonWeakLower[random.Next(nonWeakLower.Length)];
+                    if (sb.Length > 0 && weakBigramsLower.Length > 0)
+                    {
+                        char prev = sb[^1];
+                        for (int attempt = 0; attempt < 6; attempt++)
+                        {
+                            string pair = string.Concat(prev, candidate);
+                            if (!weakBigramsLower.Contains(pair, StringComparer.Ordinal))
+                            {
+                                break;
+                            }
+
+                            candidate = nonWeakLower[random.Next(nonWeakLower.Length)];
+                        }
+                    }
+
+                    sb.Append(candidate);
+                }
+
+                pseudoWords.Add(sb.ToString());
+            }
+        }
+
+        return string.Join(' ', pseudoWords);
+    }
+
+    /// <summary>
+    /// Generates a targeted 2-minute drill (~80 words) focused on the user's slowest and most error-prone letter pairs (bigrams).
+    /// </summary>
+    /// <param name="unlockedKeys">Currently unlocked letter set.</param>
+    /// <param name="bigramMetrics">Recorded bigram metrics.</param>
+    /// <param name="dictionaryPool">Embedded dictionary word pool.</param>
+    /// <param name="wordCount">Target word count (default 80 for a 2-minute drill).</param>
+    /// <param name="random">Optional RNG for deterministic testing.</param>
+    /// <returns>Space-separated bigram drill text.</returns>
+    public static string GenerateBigramDrillText(
+        IReadOnlySet<char> unlockedKeys,
+        IReadOnlyDictionary<string, BigramMetric> bigramMetrics,
+        IReadOnlyList<string>? dictionaryPool = null,
+        int wordCount = 80,
+        Random? random = null)
+    {
+        ArgumentNullException.ThrowIfNull(unlockedKeys);
+        ArgumentNullException.ThrowIfNull(bigramMetrics);
+        random ??= Random.Shared;
+
+        char[] allowedLower = unlockedKeys
+            .Select(char.ToLowerInvariant)
+            .Distinct()
+            .ToArray();
+
+        if (allowedLower.Length == 0)
+        {
+            allowedLower = ['f', 'j'];
+        }
+
+        HashSet<char> allowedSet = [.. allowedLower];
+
+        IReadOnlyList<RankedWeakness<string>> ranked = WeaknessScorer.RankBigrams(
+            bigramMetrics.Values,
+            minSamples: WeaknessScorer.DefaultMinSamples)
+            .Take(6)
+            .ToArray();
+
+        if (ranked.Count == 0)
+        {
+            ranked = WeaknessScorer.RankBigrams(
+                bigramMetrics.Values,
+                minSamples: 3)
+                .Take(6)
+                .ToArray();
+        }
+
+        string[] targetBigrams = ranked
+            .Select(b => b.Target.ToLowerInvariant())
+            .Where(b => b.Length == 2 && allowedSet.Contains(b[0]) && allowedSet.Contains(b[1]))
+            .ToArray();
+
+        if (targetBigrams.Length == 0)
+        {
+            // Fallback pairs formed from unlocked letters
+            var fallback = new List<string>();
+            for (int i = 0; i < Math.Min(allowedLower.Length, 4); i++)
+            {
+                char first = allowedLower[i];
+                char second = allowedLower[(i + 1) % allowedLower.Length];
+                fallback.Add(string.Concat(first, second));
+            }
+
+            targetBigrams = fallback.ToArray();
+        }
+
+        if (dictionaryPool is { Count: > 0 })
+        {
+            List<string> validWords = dictionaryPool
+                .Where(w => !string.IsNullOrWhiteSpace(w))
+                .Select(w => w.Trim().ToLowerInvariant())
+                .Where(w => w.All(c => allowedSet.Contains(c)))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            List<string> matchingWords = validWords
+                .Where(w => targetBigrams.Any(bg => w.Contains(bg, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            if (matchingWords.Count >= 4)
+            {
+                var chosen = new List<string>(wordCount);
+                for (int i = 0; i < wordCount; i++)
+                {
+                    bool pickBigramWord = random.NextDouble() < 0.75 || validWords.Count == 0;
+                    List<string> pool = pickBigramWord ? matchingWords : validWords;
+                    chosen.Add(pool[random.Next(pool.Count)]);
+                }
+
+                return string.Join(' ', chosen);
+            }
+        }
+
+        var words = new List<string>(wordCount);
+        for (int w = 0; w < wordCount; w++)
+        {
+            string bg = targetBigrams[w % targetBigrams.Length];
+            int len = random.Next(4, 7);
+            var sb = new StringBuilder(len);
+            for (int i = 0; i < len; i++)
+            {
+                sb.Append(allowedLower[random.Next(allowedLower.Length)]);
+            }
+
+            int pos = random.Next(0, Math.Max(1, len - 1));
+            sb[pos] = bg[0];
+            if (pos + 1 < sb.Length)
+            {
+                sb[pos + 1] = bg[1];
+            }
+            else
+            {
+                sb.Append(bg[1]);
+            }
+
+            words.Add(sb.ToString());
+        }
+
+        return string.Join(' ', words);
     }
 
     private static string BuildFromDictionary(

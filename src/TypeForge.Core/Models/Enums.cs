@@ -15,7 +15,13 @@ public enum SessionType
     TimedTest = 2,
 
     /// <summary>A custom user-provided passage session.</summary>
-    CustomText = 3
+    CustomText = 3,
+
+    /// <summary>A targeted drill focusing on the user's slowest or most error-prone letter pairs.</summary>
+    BigramDrill = 4,
+
+    /// <summary>A 60-second initial or retake placement evaluation.</summary>
+    PlacementTest = 5
 }
 
 /// <summary>
@@ -106,7 +112,10 @@ public enum TestTextSource
     BookParagraphs = 2,
 
     /// <summary>User-provided custom text passage.</summary>
-    CustomText = 3
+    CustomText = 3,
+
+    /// <summary>Curated real-world pools (Quotes, Code snippets, Numbers, and Punctuation).</summary>
+    RealWorldPools = 4
 }
 
 /// <summary>Duration or character-count mode on the Test screen.</summary>
@@ -200,4 +209,46 @@ public enum SoundTheme
 
     /// <summary>Soft low-profile tap.</summary>
     Soft = 3
+}
+
+/// <summary>Controls the reference ghost pace caret in the typing stream.</summary>
+public enum PaceCaretMode
+{
+    /// <summary>No ghost pace caret shown.</summary>
+    Off = 0,
+
+    /// <summary>Moves at a fixed user-configured WPM target.</summary>
+    FixedWpm = 1,
+
+    /// <summary>Moves at the user's personal best Net WPM.</summary>
+    PersonalBest = 2,
+
+    /// <summary>Moves at the previous completed session's Net WPM.</summary>
+    LastSession = 3
+}
+
+/// <summary>Progressive label-fading stage for the on-screen virtual keyboard.</summary>
+public enum KeyboardFadeStage
+{
+    /// <summary>All key labels and home-row bumps are visible.</summary>
+    FullLabels = 0,
+
+    /// <summary>Key labels are hidden while key outlines and F/J tactile bumps remain visible.</summary>
+    UnlabeledWithBumps = 1,
+
+    /// <summary>The virtual keyboard is hidden during typing unless a miss hint is triggered.</summary>
+    Hidden = 2
+}
+
+/// <summary>Controls when the ergonomic finger-guide hand diagram is shown.</summary>
+public enum FingerGuideMode
+{
+    /// <summary>Enabled automatically during Course lessons and hidden during open Adaptive Practice.</summary>
+    CourseDefault = 0,
+
+    /// <summary>Always displayed across Course and Practice drills.</summary>
+    AlwaysOn = 1,
+
+    /// <summary>Hidden unless explicitly triggered by repeated strict-mode misses.</summary>
+    Off = 2
 }

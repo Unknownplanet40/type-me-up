@@ -14,6 +14,19 @@ namespace TypeForge.Core.Services;
 public sealed record TimedPassage(string Id, string Title, string Text);
 
 /// <summary>
+/// Represents an embedded real-world text pool (Quotes, Code snippets, Numbers, Punctuation) for Test mode.
+/// </summary>
+/// <param name="Id">Unique pool identifier (e.g. "quotes", "code_snippets", "numbers", "punctuation").</param>
+/// <param name="Title">Display name of the pool.</param>
+/// <param name="Description">Short description of the pool's contents.</param>
+/// <param name="Items">Non-empty list of passage items in the pool.</param>
+public sealed record RealWorldPoolModel(
+    string Id,
+    string Title,
+    string Description,
+    IReadOnlyList<string> Items);
+
+/// <summary>
 /// Loads and validates embedded curriculum, timed test, and dictionary JSON resources.
 /// </summary>
 public static class EmbeddedContentLoader
@@ -23,6 +36,7 @@ public static class EmbeddedContentLoader
     private const string PassagesResourceName = "TypeForge.Core.Resources.timed_passages.json";
     private const string DictionaryResourceName = "TypeForge.Core.Resources.english_words.json";
     private const string BooksResourceName = "TypeForge.Core.Resources.books.json";
+    private const string RealWorldPoolsResourceName = "TypeForge.Core.Resources.real_world_pools.json";
 
     private static readonly string[] FallbackDictionaryWords =
     [
@@ -422,6 +436,10 @@ public static class EmbeddedContentLoader
                         throw new InvalidDataException($"Exercise '{exDto.ExerciseId}' must provide practiceText.");
                     }
 
+                    KeyboardFadeStage? defaultFadeStage = exDto.KeyboardFadeStage.HasValue
+                        ? (KeyboardFadeStage)Math.Clamp(exDto.KeyboardFadeStage.Value, 0, 2)
+                        : null;
+
                     exercises.Add(new CourseExercise(
                         exerciseId: exDto.ExerciseId.Trim(),
                         trackId: trackDto.TrackId.Trim(),
@@ -434,7 +452,9 @@ public static class EmbeddedContentLoader
                         practiceText: exDto.PracticeText?.Trim() ?? string.Empty,
                         minimumNetWpm: Math.Max(0, exDto.MinimumNetWpm),
                         minimumAccuracy: Math.Clamp(exDto.MinimumAccuracy, 0, 100),
-                        isUnlocked: firstExerciseInTrack));
+                        isUnlocked: firstExerciseInTrack,
+                        showWpm: exDto.ShowWpm,
+                        defaultKeyboardFadeStage: defaultFadeStage));
 
                     firstExerciseInTrack = false;
                 }
@@ -576,6 +596,12 @@ public static class EmbeddedContentLoader
 
         [JsonPropertyName("minimumAccuracy")]
         public double MinimumAccuracy { get; set; }
+
+        [JsonPropertyName("showWpm")]
+        public bool? ShowWpm { get; set; }
+
+        [JsonPropertyName("keyboardFadeStage")]
+        public int? KeyboardFadeStage { get; set; }
     }
 
     internal sealed class PassagesDocument
@@ -703,6 +729,12 @@ public static class EmbeddedContentLoader
 
         [JsonPropertyName("minimumAccuracy")]
         public double MinimumAccuracy { get; set; }
+
+        [JsonPropertyName("showWpm")]
+        public bool? ShowWpm { get; set; }
+
+        [JsonPropertyName("keyboardFadeStage")]
+        public int? KeyboardFadeStage { get; set; }
     }
 
     internal sealed class BooksDocument
@@ -740,6 +772,136 @@ public static class EmbeddedContentLoader
         [JsonPropertyName("paragraphs")]
         public List<string>? Paragraphs { get; set; }
     }
+
+    /// <summary>
+    /// Loads and strictly validates the embedded real-world text pools (`Quotes`, `Code snippets`, `Numbers`, `Punctuation`).
+    /// </summary>
+    public static IReadOnlyList<RealWorldPoolModel> LoadRealWorldPools()
+    {
+        string json = ReadEmbeddedText(RealWorldPoolsResourceName);
+        return ParseRealWorldPools(json);
+    }
+
+    /// <summary>
+    /// Loads real-world text pools safely, falling back to built-in pools if malformed.
+    /// </summary>
+    public static IReadOnlyList<RealWorldPoolModel> LoadRealWorldPoolsSafe()
+    {
+        try
+        {
+            return LoadRealWorldPools();
+        }
+        catch
+        {
+            return CreateFallbackRealWorldPools();
+        }
+    }
+
+    /// <summary>
+    /// Parses and validates real-world text pools JSON, throwing <see cref="InvalidDataException"/> on malformed or empty pools.
+    /// </summary>
+    public static IReadOnlyList<RealWorldPoolModel> ParseRealWorldPools(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            throw new InvalidDataException("Real-world pools JSON cannot be empty.");
+        }
+
+        RealWorldPoolsDocument? doc;
+        try
+        {
+            doc = JsonSerializer.Deserialize(json, EmbeddedContentJsonContext.Default.RealWorldPoolsDocument);
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidDataException("Malformed real-world pools JSON.", ex);
+        }
+
+        if (doc?.Pools is null || doc.Pools.Count == 0)
+        {
+            throw new InvalidDataException("Real-world pools JSON must contain at least one pool.");
+        }
+
+        var pools = new List<RealWorldPoolModel>(doc.Pools.Count);
+        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (RealWorldPoolDto dto in doc.Pools)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Id) || string.IsNullOrWhiteSpace(dto.Title))
+            {
+                throw new InvalidDataException("Each real-world pool requires a non-empty id and title.");
+            }
+
+            if (!seenIds.Add(dto.Id))
+            {
+                throw new InvalidDataException($"Duplicate real-world pool id '{dto.Id}'.");
+            }
+
+            List<string> items = dto.Items?
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Select(item => string.Join(' ', item.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)))
+                .Where(item => item.Length > 0)
+                .ToList() ?? [];
+
+            if (items.Count == 0)
+            {
+                throw new InvalidDataException($"Real-world pool '{dto.Id}' must contain at least one passage.");
+            }
+
+            pools.Add(new RealWorldPoolModel(
+                Id: dto.Id.Trim(),
+                Title: dto.Title.Trim(),
+                Description: dto.Description?.Trim() ?? string.Empty,
+                Items: items));
+        }
+
+        return pools;
+    }
+
+    private static IReadOnlyList<RealWorldPoolModel> CreateFallbackRealWorldPools() =>
+    [
+        new RealWorldPoolModel(
+            "quotes",
+            "Quotes",
+            "Classic observations on craftsmanship and deliberate practice.",
+            ["Slow is smooth, and smooth is fast. Precision at the keyboard precedes effortless speed."]),
+        new RealWorldPoolModel(
+            "code_snippets",
+            "Code snippets",
+            "Concise code expressions.",
+            ["public static int ClampIndex(int value, int max) => Math.Clamp(value, 0, Math.Max(0, max - 1));"]),
+        new RealWorldPoolModel(
+            "numbers",
+            "Numbers",
+            "Numeric and measurement passages.",
+            ["Invoice #2026-0841 totaled $1,495.50 after a 12.5% discount on 18 units."]),
+        new RealWorldPoolModel(
+            "punctuation",
+            "Punctuation",
+            "Punctuation-dense prose.",
+            ["When in doubt, pause; breathe; reset your fingers on A-S-D-F and J-K-L-;; then continue."])
+    ];
+
+    internal sealed class RealWorldPoolsDocument
+    {
+        [JsonPropertyName("pools")]
+        public List<RealWorldPoolDto>? Pools { get; set; }
+    }
+
+    internal sealed class RealWorldPoolDto
+    {
+        [JsonPropertyName("id")]
+        public string? Id { get; set; }
+
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+
+        [JsonPropertyName("items")]
+        public List<string>? Items { get; set; }
+    }
 }
 
 [JsonSourceGenerationOptions(
@@ -751,6 +913,7 @@ public static class EmbeddedContentLoader
 [JsonSerializable(typeof(EmbeddedContentLoader.CoursesDocument))]
 [JsonSerializable(typeof(EmbeddedContentLoader.WordsDocument))]
 [JsonSerializable(typeof(EmbeddedContentLoader.BooksDocument))]
+[JsonSerializable(typeof(EmbeddedContentLoader.RealWorldPoolsDocument))]
 internal sealed partial class EmbeddedContentJsonContext : JsonSerializerContext
 {
 }

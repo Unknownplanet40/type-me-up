@@ -19,8 +19,9 @@
                     <SolidColorBrush x:Key="ForgePillHoverBrush" Color="#1C1C21" />
                     <SolidColorBrush x:Key="ForgePillSelectedBrush" Color="#201A33" />
                     <SolidColorBrush x:Key="ForgeTextPrimaryBrush" Color="#F4F4F5" />
-                    <SolidColorBrush x:Key="ForgeTextSecondaryBrush" Color="#71717A" />
-                    <SolidColorBrush x:Key="ForgeTextMutedBrush" Color="#52525B" />
+                    <SolidColorBrush x:Key="ForgeTextSecondaryBrush" Color="#A1A1AA" />
+                    <SolidColorBrush x:Key="ForgeTextMutedBrush" Color="#8E8E99" />
+                    <SolidColorBrush x:Key="ForgeTextDisabledBrush" Color="#6E6E78" />
                     <SolidColorBrush x:Key="ForgePurpleBrush" Color="#A78BFA" />
                     <SolidColorBrush x:Key="ForgePurpleSoftBrush" Color="#26A78BFA" />
                     <SolidColorBrush x:Key="ForgePurpleGlowBrush" Color="#3DA78BFA" />
@@ -33,8 +34,8 @@
                     <SolidColorBrush x:Key="ForgeRedBrush" Color="#F87171" />
                     <SolidColorBrush x:Key="ForgeRedFillBrush" Color="#281416" />
                     <SolidColorBrush x:Key="ForgeRedBorderBrush" Color="#4F2024" />
-                    <SolidColorBrush x:Key="ForgeKeyNeutralBrush" Color="#141417" />
-                    <SolidColorBrush x:Key="ForgeKeyNeutralBorderBrush" Color="#222228" />
+                    <SolidColorBrush x:Key="ForgeKeyNeutralBrush" Color="#18181E" />
+                    <SolidColorBrush x:Key="ForgeKeyNeutralBorderBrush" Color="#2E2E38" />
                     <SolidColorBrush x:Key="ForgeFlameBrush" Color="#FB923C" />
                     <SolidColorBrush x:Key="ForgeOverlayBackdropBrush" Color="#B3050508" />
                 </ResourceDictionary>
@@ -47,8 +48,9 @@
                     <SolidColorBrush x:Key="ForgePillHoverBrush" Color="#EFEFF1" />
                     <SolidColorBrush x:Key="ForgePillSelectedBrush" Color="#EDE9FE" />
                     <SolidColorBrush x:Key="ForgeTextPrimaryBrush" Color="#18181B" />
-                    <SolidColorBrush x:Key="ForgeTextSecondaryBrush" Color="#71717A" />
-                    <SolidColorBrush x:Key="ForgeTextMutedBrush" Color="#A1A1AA" />
+                    <SolidColorBrush x:Key="ForgeTextSecondaryBrush" Color="#52525B" />
+                    <SolidColorBrush x:Key="ForgeTextMutedBrush" Color="#63636E" />
+                    <SolidColorBrush x:Key="ForgeTextDisabledBrush" Color="#7D7D87" />
                     <SolidColorBrush x:Key="ForgePurpleBrush" Color="#7C3AED" />
                     <SolidColorBrush x:Key="ForgePurpleSoftBrush" Color="#1F7C3AED" />
                     <SolidColorBrush x:Key="ForgePurpleGlowBrush" Color="#337C3AED" />
@@ -62,7 +64,7 @@
                     <SolidColorBrush x:Key="ForgeRedFillBrush" Color="#FEF2F2" />
                     <SolidColorBrush x:Key="ForgeRedBorderBrush" Color="#FECACA" />
                     <SolidColorBrush x:Key="ForgeKeyNeutralBrush" Color="#F4F4F5" />
-                    <SolidColorBrush x:Key="ForgeKeyNeutralBorderBrush" Color="#E4E4E7" />
+                    <SolidColorBrush x:Key="ForgeKeyNeutralBorderBrush" Color="#D4D4D8" />
                     <SolidColorBrush x:Key="ForgeFlameBrush" Color="#EA580C" />
                     <SolidColorBrush x:Key="ForgeOverlayBackdropBrush" Color="#8018181B" />
                 </ResourceDictionary>

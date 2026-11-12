@@ -1,0 +1,64 @@
+{
+  "pools": [
+    {
+      "id": "quotes",
+      "title": "Quotes",
+      "description": "Classic observations on craftsmanship, software, writing, and deliberate practice.",
+      "items": [
+        "Simplicity is about subtracting the obvious and adding the meaningful.",
+        "First, solve the problem. Then, write the code cleanly so the next engineer can read it.",
+        "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+        "Make it work, make it right, make it fast, and never sacrifice clarity for cleverness.",
+        "Programs must be written for people to read, and only incidentally for machines to execute.",
+        "Slow is smooth, and smooth is fast. Precision at the keyboard precedes effortless speed.",
+        "Amateurs sit and wait for inspiration; the rest of us just get up and go to work.",
+        "The secret of getting ahead is getting started with one focused step at a time."
+      ]
+    },
+    {
+      "id": "code_snippets",
+      "title": "Code snippets",
+      "description": "Concise C#, TypeScript, SQL, and shell expressions with brackets, operators, and identifiers.",
+      "items": [
+        "public static int ClampIndex(int value, int max) => Math.Clamp(value, 0, Math.Max(0, max - 1));",
+        "SELECT character, total_strokes, average_latency_ms FROM KeyStatistics WHERE total_strokes >= 20 ORDER BY error_rate DESC;",
+        "const ranked = items.filter(x => x.samples >= 20).sort((a, b) => b.score - a.score);",
+        "await using var connection = new SqliteConnection($\"Data Source={dbPath}\"); await connection.OpenAsync(ct);",
+        "export interface SessionSummary { readonly sessionId: string; readonly netWpm: number; readonly accuracy: number; }",
+        "if (snapshot.IsCompleted && !IsResultsVisible) { FinalizeCompletedSession(snapshot); return; }",
+        "foreach (var (key, metric) in result.KeyBreakdown) { schedule[key] = scheduler.Evaluate(key, metric); }",
+        "git commit -m \"feat(core): add pace caret and real-world test text pools\" && git status --short"
+      ]
+    },
+    {
+      "id": "numbers",
+      "title": "Numbers",
+      "description": "Numeric sequences, measurements, dates, timestamps, and financial figures.",
+      "items": [
+        "Invoice #2026-0841 totaled $1,495.50 after a 12.5% discount on 18 units shipped on 2026-11-12.",
+        "Latency dropped from 482.6 ms to 219.4 ms across 1,250 keystrokes at 98.4% accuracy.",
+        "Server node 10.240.18.92 processed 48,920 requests in 60.0 seconds with a 99.95% success rate.",
+        "Flight 742 departs Gate B19 at 06:45 UTC and arrives at 14:20 UTC covering 3,840 kilometers.",
+        "Quarterly revenue grew 18.7% from $2,340,000 in Q3 2025 to $2,777,580 in Q4 2025.",
+        " Viewport breakpoints are configured at 360px, 768px, 1024px, 1280px, 1440px, and 1920px.",
+        "Batch #9041 verified 65,536 checksums in 1.08 seconds using 8 worker threads and 256 MB RAM.",
+        "Coordinates 37.7749 N, 122.4194 W recorded 19.8 C temperature and 1,013.25 hPa pressure."
+      ]
+    },
+    {
+      "id": "punctuation",
+      "title": "Punctuation",
+      "description": "Prose rich in semicolons, colons, quotes, parentheses, hyphens, and question marks.",
+      "items": [
+        "\"Wait—did you check the config file (appsettings.json), or did we skip step #3?\" she asked.",
+        "Touch-typing demands three habits: steady posture, home-row anchoring (F/J), and zero downward glances!",
+        "When in doubt, pause; breathe; reset your fingers on A-S-D-F and J-K-L-;; then continue.",
+        "Isn't it remarkable how 15 minutes/day—practiced consistently—outperforms a 2-hour weekend cram?",
+        "Warning: strict mode ('Stop on error') halts the cursor until the exact expected key is pressed.",
+        "Check these symbols carefully: [brackets], {braces}, (parentheses), 'single quotes', and \"double quotes\".",
+        "Speed without accuracy is noise; accuracy (96%+) is the foundation upon which true fluency is built.",
+        " Question #1: Which finger reaches ';' and ':'? Answer: your right pinky—anchored right on the home row!"
+      ]
+    }
+  ]
+}

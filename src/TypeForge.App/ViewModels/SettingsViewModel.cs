@@ -225,6 +225,140 @@ public sealed partial class SettingsViewModel : ObservableObject
         }
     }
 
+    public bool CoursePassGateEnabled
+    {
+        get => _state.Settings.CoursePassGateEnabled;
+        set
+        {
+            if (_state.Settings.CoursePassGateEnabled != value)
+            {
+                _state.Settings.CoursePassGateEnabled = value;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public double CourseMinAccuracy
+    {
+        get => _state.Settings.CourseMinAccuracy;
+        set
+        {
+            double clamped = Math.Clamp(Math.Round(value), UserSettings.MinCourseAccuracy, UserSettings.MaxCourseAccuracy);
+            if (Math.Abs(_state.Settings.CourseMinAccuracy - clamped) > 0.01)
+            {
+                _state.Settings.CourseMinAccuracy = clamped;
+                _state.SaveSettings();
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CourseMinAccuracyLabel));
+            }
+        }
+    }
+
+    public string CourseMinAccuracyLabel => $"{CourseMinAccuracy:0}%";
+
+    public int CourseMaxMistakes
+    {
+        get => _state.Settings.CourseMaxMistakes;
+        set
+        {
+            int clamped = Math.Clamp(value, UserSettings.MinCourseMaxMistakes, UserSettings.MaxCourseMaxMistakes);
+            if (_state.Settings.CourseMaxMistakes != clamped)
+            {
+                _state.Settings.CourseMaxMistakes = clamped;
+                _state.SaveSettings();
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CourseMaxMistakesLabel));
+            }
+        }
+    }
+
+    public string CourseMaxMistakesLabel => CourseMaxMistakes == 1 ? "1 mistake" : $"{CourseMaxMistakes} mistakes";
+
+    public int FingerGuideModeIndex
+    {
+        get => (int)_state.Settings.FingerGuideMode;
+        set
+        {
+            var next = (FingerGuideMode)Math.Clamp(value, 0, 2);
+            if (_state.Settings.FingerGuideMode != next)
+            {
+                _state.Settings.FingerGuideMode = next;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public int KeyboardFadeStageIndex
+    {
+        get => (int)_state.Settings.KeyboardFadeStage;
+        set
+        {
+            var next = (KeyboardFadeStage)Math.Clamp(value, 0, 2);
+            if (_state.Settings.KeyboardFadeStage != next)
+            {
+                _state.Settings.KeyboardFadeStage = next;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool ShowWpmInCourse
+    {
+        get => _state.Settings.ShowWpmInCourse;
+        set
+        {
+            if (_state.Settings.ShowWpmInCourse != value)
+            {
+                _state.Settings.ShowWpmInCourse = value;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public int PaceCaretModeIndex
+    {
+        get => (int)_state.Settings.PaceCaretMode;
+        set
+        {
+            var next = (PaceCaretMode)Math.Clamp(value, 0, 3);
+            if (_state.Settings.PaceCaretMode != next)
+            {
+                _state.Settings.PaceCaretMode = next;
+                _state.SaveSettings();
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsFixedPaceCaretSelected));
+            }
+        }
+    }
+
+    public bool IsFixedPaceCaretSelected => _state.Settings.PaceCaretMode == PaceCaretMode.FixedWpm;
+
+    public int PaceTargetWpm
+    {
+        get => _state.Settings.PaceTargetWpm;
+        set
+        {
+            int clamped = Math.Clamp(value, UserSettings.MinPaceTargetWpm, UserSettings.MaxPaceTargetWpm);
+            if (_state.Settings.PaceTargetWpm != clamped)
+            {
+                _state.Settings.PaceTargetWpm = clamped;
+                _state.SaveSettings();
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void RetakePlacementTest()
+    {
+        _state.QueuePlacementTest();
+        _navigation.NavigateTo("practice");
+    }
+
     public SettingsViewModel(
         ITypeForgeStateService state,
         INavigationService navigation,

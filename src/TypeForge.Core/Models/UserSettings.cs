@@ -41,8 +41,8 @@ public sealed class UserSettings
     /// <summary>Gets or sets the word generation mode for adaptive drills.</summary>
     public AdaptiveWordMode AdaptiveWordMode { get; set; } = AdaptiveWordMode.PhoneticPseudoWords;
 
-    /// <summary>Gets or sets the daily active practice target in minutes.</summary>
-    public int DailyGoalMinutes { get; set; } = 30;
+    /// <summary>Gets or sets the daily active practice target in minutes (defaults to 15 minutes for new users).</summary>
+    public int DailyGoalMinutes { get; set; } = 15;
 
     /// <summary>Gets or sets a value indicating whether course drills automatically adapt duration to user mastery.</summary>
     public bool OptimalDurationEnabled { get; set; } = true;
@@ -52,6 +52,12 @@ public sealed class UserSettings
 
     /// <summary>Maximum allowed common-words pool size.</summary>
     public const int MaxCommonWordCount = 1000;
+
+    /// <summary>Minimum allowed pace caret target WPM.</summary>
+    public const int MinPaceTargetWpm = 10;
+
+    /// <summary>Maximum allowed pace caret target WPM.</summary>
+    public const int MaxPaceTargetWpm = 250;
 
     /// <summary>Gets or sets the active structured course track identifier.</summary>
     public string SelectedCourseTrackId { get; set; } = "fast_touch";
@@ -107,6 +113,45 @@ public sealed class UserSettings
     /// <summary>Gets or sets custom passage text for Custom Text mode.</summary>
     public string CustomTestText { get; set; } = string.Empty;
 
+    /// <summary>Gets or sets the selected real-world text pool identifier in Test mode (e.g. "quotes", "code_snippets", "numbers", "punctuation").</summary>
+    public string SelectedRealWorldPoolId { get; set; } = "quotes";
+
+    /// <summary>Gets or sets the active pace caret mode.</summary>
+    public PaceCaretMode PaceCaretMode { get; set; } = PaceCaretMode.Off;
+
+    /// <summary>Gets or sets the target WPM for FixedWpm pace caret mode.</summary>
+    public int PaceTargetWpm { get; set; } = 60;
+
+    /// <summary>Gets or sets the virtual keyboard label fade stage.</summary>
+    public KeyboardFadeStage KeyboardFadeStage { get; set; } = KeyboardFadeStage.FullLabels;
+
+    /// <summary>Gets or sets when the finger-guide hand diagram is displayed.</summary>
+    public FingerGuideMode FingerGuideMode { get; set; } = FingerGuideMode.CourseDefault;
+
+    /// <summary>Gets or sets whether WPM is always shown during early accuracy-first course lessons.</summary>
+    public bool ShowWpmInCourse { get; set; } = false;
+
+    /// <summary>Minimum allowed configurable course pass accuracy percentage.</summary>
+    public const double MinCourseAccuracy = 50.0;
+
+    /// <summary>Maximum allowed configurable course pass accuracy percentage.</summary>
+    public const double MaxCourseAccuracy = 100.0;
+
+    /// <summary>Minimum allowed configurable course mistake limit.</summary>
+    public const int MinCourseMaxMistakes = 0;
+
+    /// <summary>Maximum allowed configurable course mistake limit.</summary>
+    public const int MaxCourseMaxMistakes = 50;
+
+    /// <summary>Gets or sets whether course exercises require meeting minimum accuracy and maximum mistakes to proceed.</summary>
+    public bool CoursePassGateEnabled { get; set; } = true;
+
+    /// <summary>Gets or sets the minimum accuracy percentage required to pass a course exercise (default 90%).</summary>
+    public double CourseMinAccuracy { get; set; } = 90.0;
+
+    /// <summary>Gets or sets the maximum mistakes allowed to pass a course exercise (default 5).</summary>
+    public int CourseMaxMistakes { get; set; } = 5;
+
     /// <summary>
     /// Validates user preference bounds and throws if out of range.
     /// </summary>
@@ -145,6 +190,27 @@ public sealed class UserSettings
             throw new ArgumentOutOfRangeException(
                 nameof(SelectedBookParagraphIndex),
                 "Paragraph index cannot be negative.");
+        }
+
+        if (PaceTargetWpm < MinPaceTargetWpm || PaceTargetWpm > MaxPaceTargetWpm)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(PaceTargetWpm),
+                $"Pace target WPM must be between {MinPaceTargetWpm} and {MaxPaceTargetWpm}.");
+        }
+
+        if (CourseMinAccuracy < MinCourseAccuracy || CourseMinAccuracy > MaxCourseAccuracy)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(CourseMinAccuracy),
+                $"Course minimum accuracy must be between {MinCourseAccuracy} and {MaxCourseAccuracy}.");
+        }
+
+        if (CourseMaxMistakes < MinCourseMaxMistakes || CourseMaxMistakes > MaxCourseMaxMistakes)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(CourseMaxMistakes),
+                $"Course maximum mistakes must be between {MinCourseMaxMistakes} and {MaxCourseMaxMistakes}.");
         }
     }
 }

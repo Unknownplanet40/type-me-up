@@ -20,13 +20,25 @@ public sealed partial class CourseViewModel : ObservableObject
     private CourseExercise? _activeTipExercise;
 
     [ObservableProperty]
-    private int _selectedExtraTrackIndex;
+    private bool _isPlacementWelcomeVisible;
 
     public IReadOnlyList<CourseTrack> Tracks => _state.CourseTracks;
     public CourseTrack ActiveTrack => _state.SelectedCourseTrack ?? _state.CourseTracks[0];
 
-    public IReadOnlyList<CourseTrack> ExtraTracks =>
-        _state.CourseTracks.Where(t => t.TrackId is not "fast_touch" and not "speed_building").ToList();
+    public int CompletedLessonsCount => ActiveTrack.Units.Count(u => u.IsCompleted);
+    public int TotalLessonsCount => ActiveTrack.Units.Count;
+    public int RemainingLessonsCount => Math.Max(0, TotalLessonsCount - CompletedLessonsCount);
+    public int TrackCompletionPercent => TotalLessonsCount == 0 ? 0 : (int)Math.Round(100.0 * CompletedLessonsCount / TotalLessonsCount);
+    public double TrackLessonProgressFraction => TotalLessonsCount == 0 ? 0.0 : (double)CompletedLessonsCount / TotalLessonsCount;
+    public int EarnedStarsCount => ActiveTrack.Units.Sum(u => u.Exercises.Sum(e => e.Stars));
+    public int MaxStarsCount => ActiveTrack.Units.Sum(u => u.Exercises.Count(e => e.Kind != CourseStepKind.Tip) * 3);
+    public bool IsTrackCompleted => TotalLessonsCount > 0 && CompletedLessonsCount == TotalLessonsCount;
+
+    public string PrimaryActionLabel => ActiveTrack.CompletedExerciseCount == 0
+        ? "Start Course"
+        : IsTrackCompleted
+            ? "Review Course"
+            : "Continue Lesson";
 
     public bool OptimalDurationEnabled
     {
@@ -44,7 +56,7 @@ public sealed partial class CourseViewModel : ObservableObject
         }
     }
 
-    public string OptimalDurationLabel => OptimalDurationEnabled ? "Optimal Duration: On" : "Optimal Duration: Off";
+    public string OptimalDurationLabel => OptimalDurationEnabled ? "Skip ahead when mastered: On" : "Skip ahead when mastered: Off";
 
     public CourseUnit ActiveUnit
     {
@@ -68,9 +80,77 @@ public sealed partial class CourseViewModel : ObservableObject
     {
         SelectFirstIncompleteUnit();
         ActiveTipExercise = null;
+        IsPlacementWelcomeVisible = _state.ShouldPromptPlacement;
+        NotifyTrackAndUnitChanged();
+        StateRefreshed?.Invoke();
+    }
+
+    public KeyMetric? GetKeyMetric(char key)
+    {
+        return _state.AggregateKeyMetrics.TryGetValue(char.ToLowerInvariant(key), out KeyMetric? metric)
+            ? metric
+            : _state.AggregateKeyMetrics.TryGetValue(key, out KeyMetric? exact)
+                ? exact
+                : null;
+    }
+
+    public string GetUnitStatusLabel(CourseUnit unit)
+    {
+        if (unit.IsCompleted)
+        {
+            return "Completed";
+        }
+
+        if (!unit.IsUnlocked)
+        {
+            return "Locked";
+        }
+
+        return unit.CompletedCount > 0 ? "In Progress" : "Available";
+    }
+
+    public string GetLockedUnitReason(CourseUnit unit)
+    {
+        return unit.UnitNumber <= 1
+            ? "Available now"
+            : $"Complete Lesson {unit.UnitNumber - 1} to unlock";
+    }
+
+    public string GetLockedExerciseReason(CourseExercise exercise)
+    {
+        return exercise.OrderIndex <= 1
+            ? $"Complete Lesson {exercise.UnitNumber - 1} to unlock"
+            : $"Complete step {exercise.OrderIndex - 1} to unlock";
+    }
+
+    private void NotifyTrackAndUnitChanged()
+    {
         OnPropertyChanged(nameof(ActiveTrack));
         OnPropertyChanged(nameof(ActiveUnit));
-        StateRefreshed?.Invoke();
+        OnPropertyChanged(nameof(CompletedLessonsCount));
+        OnPropertyChanged(nameof(TotalLessonsCount));
+        OnPropertyChanged(nameof(RemainingLessonsCount));
+        OnPropertyChanged(nameof(TrackCompletionPercent));
+        OnPropertyChanged(nameof(TrackLessonProgressFraction));
+        OnPropertyChanged(nameof(EarnedStarsCount));
+        OnPropertyChanged(nameof(MaxStarsCount));
+        OnPropertyChanged(nameof(IsTrackCompleted));
+        OnPropertyChanged(nameof(PrimaryActionLabel));
+    }
+
+    [RelayCommand]
+    public void StartPlacementFromCourse()
+    {
+        IsPlacementWelcomeVisible = false;
+        _state.QueuePlacementTest();
+        _navigation.NavigateTo("practice");
+    }
+
+    [RelayCommand]
+    public void SkipPlacementFromCourse()
+    {
+        _state.DismissPlacementPrompt();
+        IsPlacementWelcomeVisible = false;
     }
 
     [RelayCommand]
@@ -101,22 +181,8 @@ public sealed partial class CourseViewModel : ObservableObject
         IsCoursePickerOpen = false;
         SelectFirstIncompleteUnit();
         ActiveTipExercise = null;
-        OnPropertyChanged(nameof(ActiveTrack));
-        OnPropertyChanged(nameof(ActiveUnit));
+        NotifyTrackAndUnitChanged();
         StateRefreshed?.Invoke();
-    }
-
-    [RelayCommand]
-    private void StartSelectedExtraTrack()
-    {
-        IReadOnlyList<CourseTrack> extras = ExtraTracks;
-        if (extras.Count == 0)
-        {
-            return;
-        }
-
-        int idx = Math.Clamp(SelectedExtraTrackIndex, 0, extras.Count - 1);
-        SelectTrack(extras[idx].TrackId);
     }
 
     [RelayCommand]
@@ -141,11 +207,22 @@ public sealed partial class CourseViewModel : ObservableObject
         }
 
         string effectivePrompt = _state.GetEffectiveExercisePrompt(exercise);
+        CourseUnit? parentUnit = ActiveTrack.Units.FirstOrDefault(u => u.UnitNumber == exercise.UnitNumber);
+        CourseExercise? precedingTip = parentUnit?.Exercises
+            .Where(e => e.OrderIndex < exercise.OrderIndex && e.Kind == CourseStepKind.Tip)
+            .OrderByDescending(e => e.OrderIndex)
+            .FirstOrDefault();
+
+        string? tipBanner = !string.IsNullOrWhiteSpace(exercise.TipContent)
+            ? exercise.TipContent
+            : precedingTip?.TipContent;
+
         _state.QueuePracticeSession(
             $"{ActiveTrack.Title} · {exercise.Title}",
             effectivePrompt,
             SessionType.CourseLesson,
-            lessonId: exercise.ExerciseId);
+            lessonId: exercise.ExerciseId,
+            tipBannerText: tipBanner);
 
         _navigation.NavigateTo("practice");
     }
@@ -168,6 +245,7 @@ public sealed partial class CourseViewModel : ObservableObject
             ActiveTipExercise = next;
         }
 
+        NotifyTrackAndUnitChanged();
         StateRefreshed?.Invoke();
     }
 

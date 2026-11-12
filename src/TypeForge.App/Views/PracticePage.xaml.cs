@@ -43,7 +43,10 @@ public sealed partial class PracticePage : Page
 
     public void FocusTypingSurface()
     {
-        if (!ViewModel.IsSettingsDialogOpen && !ViewModel.IsResultsVisible)
+        if (!ViewModel.IsSettingsDialogOpen
+            && !ViewModel.IsResultsVisible
+            && !ViewModel.IsPlacementWelcomeVisible
+            && !ViewModel.IsPlacementResultVisible)
         {
             Focus(FocusState.Programmatic);
         }
@@ -51,7 +54,11 @@ public sealed partial class PracticePage : Page
 
     public bool HandleCharacterInput(char ch)
     {
-        if (ViewModel.IsSettingsDialogOpen || ViewModel.IsResultsVisible || char.IsControl(ch))
+        if (ViewModel.IsSettingsDialogOpen
+            || ViewModel.IsResultsVisible
+            || ViewModel.IsPlacementWelcomeVisible
+            || ViewModel.IsPlacementResultVisible
+            || char.IsControl(ch))
         {
             return false;
         }
@@ -163,8 +170,38 @@ public sealed partial class PracticePage : Page
             ViewModel.CursorShape,
             ViewModel.CursorMovement);
         StreamView.RenderSnapshot(snapshot);
+        StreamView.UpdatePaceCaret(ViewModel.GhostCaretIndex, ViewModel.IsPaceCaretVisible);
+        UpdateCapsLockWarning(snapshot.TargetText);
         RenderKeyPills(dict);
-        VirtualKeyboard.UpdateState(ViewModel.ActiveTargetKey, ViewModel.KeyMetrics, ViewModel.KeyboardColorMode);
+
+        VirtualKeyboard.Visibility = ViewModel.ShowKeyboard ? Visibility.Visible : Visibility.Collapsed;
+        if (ViewModel.HasWrongKeyFeedback && ViewModel.LastWrongPressedKey != '\0')
+        {
+            VirtualKeyboard.ShowWrongKeyFeedback(
+                ViewModel.LastWrongPressedKey,
+                ViewModel.LastExpectedKey,
+                ViewModel.WrongKeyFingerHint);
+        }
+        else
+        {
+            VirtualKeyboard.ClearWrongKeyFeedback();
+        }
+
+        VirtualKeyboard.UpdateState(
+            ViewModel.ActiveTargetKey,
+            ViewModel.KeyMetrics,
+            ViewModel.KeyboardColorMode,
+            ViewModel.EffectiveKeyboardFadeStage);
+
+        PracticeFingerGuide.UpdateTargetKey(ViewModel.ActiveTargetKey, ViewModel.WrongKeyFingerHint);
+
+        string targetLabel = ViewModel.ActiveTargetKey == ' ' ? "Space" : char.ToUpperInvariant(ViewModel.ActiveTargetKey).ToString();
+        string fingerName = TypeForge.Core.Engine.FingerMap.GetDisplayName(TypeForge.Core.Engine.FingerMap.GetFinger(ViewModel.ActiveTargetKey));
+        string announcement = !string.IsNullOrWhiteSpace(ViewModel.WrongKeyFingerHint)
+            ? $"Target key {targetLabel}, {fingerName}. Hint: {ViewModel.WrongKeyFingerHint}"
+            : $"Target key {targetLabel}, {fingerName}";
+        TargetKeyLiveAnnouncer.Text = announcement;
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(TargetKeyLiveAnnouncer, announcement);
     }
 
     private void RenderKeyPills(ResourceDictionary dict)
@@ -177,9 +214,10 @@ public sealed partial class PracticePage : Page
         foreach (KeyValuePair<char, (Border OuterGlow, Border InnerPill, TextBlock Label)> kvp in _pillLookup)
         {
             char key = kvp.Key;
-            (Border outerGlow, Border innerPill, TextBlock label) = kvp.Value;
+            (Border outerGlow, Border InnerPill, TextBlock label) = kvp.Value;
+            Border innerPill = InnerPill;
             bool isLocked = checkAdaptiveLocks && !unlocked.Contains(key);
-            innerPill.Opacity = isLocked ? 0.38 : 1.0;
+            innerPill.Opacity = 1.0;
 
             if (key == activeUpper)
             {
@@ -187,7 +225,6 @@ public sealed partial class PracticePage : Page
                 innerPill.Background = (Brush)dict["ForgePillSelectedBrush"];
                 innerPill.BorderBrush = (Brush)dict["ForgePurpleBrush"];
                 innerPill.BorderThickness = new Thickness(1.5);
-                innerPill.Opacity = 1.0;
                 label.Foreground = (Brush)dict["ForgePurpleBrush"];
                 label.FontWeight = FontWeights.Bold;
                 continue;
@@ -221,9 +258,9 @@ public sealed partial class PracticePage : Page
             else
             {
                 innerPill.Background = (Brush)dict["ForgeKeyNeutralBrush"];
-                innerPill.BorderBrush = (Brush)dict["ForgeKeyNeutralBorderBrush"];
-                label.Foreground = (Brush)dict["ForgeTextMutedBrush"];
-                label.FontWeight = FontWeights.Normal;
+                innerPill.BorderBrush = (Brush)dict[isLocked ? "ForgeHairlineBrush" : "ForgeKeyNeutralBorderBrush"];
+                label.Foreground = (Brush)dict[isLocked ? "ForgeTextDisabledBrush" : "ForgeTextMutedBrush"];
+                label.FontWeight = isLocked ? FontWeights.Normal : FontWeights.Medium;
             }
         }
     }
@@ -284,10 +321,24 @@ public sealed partial class PracticePage : Page
 
     private void Page_PreviewKeyDown(object sender, KeyRoutedEventArgs e)
     {
+        if (e.Key == VirtualKey.CapitalLock)
+        {
+            DispatcherQueue.TryEnqueue(() => UpdateCapsLockWarning(ViewModel.CurrentSnapshot?.TargetText));
+        }
+
         if (HandleKeyDownInput(e.Key))
         {
             e.Handled = true;
         }
+    }
+
+    private void UpdateCapsLockWarning(string? targetText)
+    {
+        bool isCapsLockOn = (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.CapitalLock)
+            & Windows.UI.Core.CoreVirtualKeyStates.Locked) != 0;
+        CapsLockWarningBanner.Visibility = CapsLockGuard.ShouldShowWarning(isCapsLockOn, targetText)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
 
     private void Root_PointerEntered(object sender, PointerRoutedEventArgs e) => HoverControls.Opacity = 1.0;
@@ -350,5 +401,81 @@ public sealed partial class PracticePage : Page
     {
         ViewModel.RestartSession();
         Focus(FocusState.Programmatic);
+    }
+
+    private void BtnStartTodaysSession_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.StartTodaysSession();
+        Focus(FocusState.Programmatic);
+    }
+
+    private void BtnCancelDailyPlan_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.CancelTodaysSession();
+        Focus(FocusState.Programmatic);
+    }
+
+    private void BtnStartPlacement_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.StartPlacementCheck();
+        Focus(FocusState.Programmatic);
+    }
+
+    private void BtnSkipPlacement_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.SkipPlacementCheck();
+        Focus(FocusState.Programmatic);
+    }
+
+    private void BtnAcceptPlacement_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.AcceptPlacementRecommendation();
+        Focus(FocusState.Programmatic);
+    }
+
+    private void BtnPickCourseMyself_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.PickCourseMyselfAfterPlacement();
+    }
+
+    private void BtnDismissFatigue_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.DismissFatigueBanner();
+        Focus(FocusState.Programmatic);
+    }
+
+    private void BtnDrillSlowestPairs_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.DrillSlowestPairs();
+        Focus(FocusState.Programmatic);
+    }
+
+    private void BtnInsightAction_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ExecuteInsightAction();
+        Focus(FocusState.Programmatic);
+    }
+
+    private void PlacementWelcomeOverlay_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        bool isNarrow = e.NewSize.Width < 900;
+        if (isNarrow)
+        {
+            PracticeHeroTextCol.Width = new GridLength(1, GridUnitType.Star);
+            PracticeHeroArtCol.Width = new GridLength(0);
+            Grid.SetColumn(PracticeHeroArtPanel, 0);
+            Grid.SetRow(PracticeHeroArtPanel, 0);
+            Grid.SetColumn(PracticeHeroTextStack, 0);
+            Grid.SetRow(PracticeHeroTextStack, 1);
+        }
+        else
+        {
+            PracticeHeroTextCol.Width = new GridLength(320);
+            PracticeHeroArtCol.Width = new GridLength(1, GridUnitType.Star);
+            Grid.SetColumn(PracticeHeroTextStack, 0);
+            Grid.SetRow(PracticeHeroTextStack, 0);
+            Grid.SetColumn(PracticeHeroArtPanel, 1);
+            Grid.SetRow(PracticeHeroArtPanel, 0);
+        }
     }
 }

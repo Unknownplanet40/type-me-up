@@ -17,6 +17,9 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
                 <!-- Header -->
@@ -29,13 +32,18 @@
                         <TextBlock Text="Statistics &amp; Heatmap" FontSize="26" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
                         <TextBlock Text="{x:Bind ViewModel.SessionCountSummary, Mode=OneWay}" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                     </StackPanel>
-                    <Button
-                        Grid.Column="1"
-                        Content="Review Weak Keys"
-                        Style="{StaticResource ForgePrimaryButtonStyle}"
-                        VerticalAlignment="Center"
-                        AutomationProperties.Name="Start drill targeting weak keys"
-                        Click="DrillWeakKeys_Click" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <Button
+                            Content="Drill Slowest Pairs"
+                            Style="{StaticResource ForgeSecondaryButtonStyle}"
+                            AutomationProperties.Name="Start 2-minute drill targeting slowest letter pairs"
+                            Click="DrillSlowestPairs_Click" />
+                        <Button
+                            Content="Review Weak Keys"
+                            Style="{StaticResource ForgePrimaryButtonStyle}"
+                            AutomationProperties.Name="Start drill targeting weak keys"
+                            Click="DrillWeakKeys_Click" />
+                    </StackPanel>
                 </Grid>
 
                 <!-- Summary KPI Cards -->
@@ -79,71 +87,166 @@
                 <!-- TypingMaster-Style Speed / Accuracy Benchmark Charts -->
                 <Border Grid.Row="2" Style="{StaticResource ForgeCardStyle}">
                     <StackPanel Spacing="16">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button
-                                x:Name="BtnTabSpeed"
-                                Content="Typing Speed"
-                                Style="{StaticResource ForgePrimaryButtonStyle}"
-                                AutomationProperties.Name="Show Typing Speed charts"
-                                Tag="0"
-                                Click="ChartTab_Click" />
-                            <Button
-                                x:Name="BtnTabAccuracy"
-                                Content="Accuracy &amp; Difficult Keys"
-                                Style="{StaticResource ForgeSecondaryButtonStyle}"
-                                AutomationProperties.Name="Show Accuracy and Difficult Keys charts"
-                                Tag="1"
-                                Click="ChartTab_Click" />
+                        <controls:EmptyStateView
+                            Kind="NoStats"
+                            Visibility="{x:Bind ViewModel.IsNoStatsEmpty, Mode=OneWay}"
+                            ActionRequested="EmptyState_ActionRequested" />
+
+                        <StackPanel Spacing="16" Visibility="{x:Bind ViewModel.HasStats, Mode=OneWay}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button
+                                    x:Name="BtnTabSpeed"
+                                    Content="Typing Speed"
+                                    Style="{StaticResource ForgePrimaryButtonStyle}"
+                                    AutomationProperties.Name="Show Typing Speed charts"
+                                    Tag="0"
+                                    Click="ChartTab_Click" />
+                                <Button
+                                    x:Name="BtnTabAccuracy"
+                                    Content="Accuracy &amp; Difficult Keys"
+                                    Style="{StaticResource ForgeSecondaryButtonStyle}"
+                                    AutomationProperties.Name="Show Accuracy and Difficult Keys charts"
+                                    Tag="1"
+                                    Click="ChartTab_Click" />
+                                <Button
+                                    x:Name="BtnTabWeekly"
+                                    Content="Weekly Trend (7 Days)"
+                                    Style="{StaticResource ForgeSecondaryButtonStyle}"
+                                    AutomationProperties.Name="Show 7-day weekly WPM and accuracy trend charts"
+                                    Tag="2"
+                                    Click="ChartTab_Click" />
+                            </StackPanel>
+
+                            <!-- Tab 0: Gross & Net WPM Charts -->
+                            <Grid x:Name="SpeedChartsPanel" ColumnSpacing="20" HorizontalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Spacing="8">
+                                    <TextBlock Text="Gross Speed (wpm)" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                                        <Canvas x:Name="GrossSpeedCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Spacing="8">
+                                    <TextBlock Text="Net Speed (wpm)" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                                        <Canvas x:Name="NetSpeedCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Tab 1: Accuracy % & Difficult Keys Charts -->
+                            <Grid x:Name="AccuracyChartsPanel" Visibility="Collapsed" ColumnSpacing="20" HorizontalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Spacing="8">
+                                    <TextBlock Text="Accuracy (%)" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                                        <Canvas x:Name="AccuracyCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Spacing="8">
+                                    <TextBlock Text="Difficult Keys" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                                        <Canvas x:Name="DifficultKeysCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Tab 2: 7-Day Weekly Trend (WPM & Accuracy) -->
+                            <Grid x:Name="WeeklyChartsPanel" Visibility="Collapsed" ColumnSpacing="20" HorizontalAlignment="Stretch">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Spacing="8">
+                                    <TextBlock Text="7-Day Net WPM Trend" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                                        <Canvas x:Name="WeeklyWpmCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Spacing="8">
+                                    <TextBlock Text="7-Day Accuracy Trend (%)" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                                        <Canvas x:Name="WeeklyAccuracyCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
-
-                        <!-- Tab 0: Gross & Net WPM Charts -->
-                        <Grid x:Name="SpeedChartsPanel" ColumnSpacing="20" HorizontalAlignment="Stretch">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" Spacing="8">
-                                <TextBlock Text="Gross Speed (wpm)" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                                <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
-                                    <Canvas x:Name="GrossSpeedCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
-                                </Border>
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="1" Spacing="8">
-                                <TextBlock Text="Net Speed (wpm)" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                                <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
-                                    <Canvas x:Name="NetSpeedCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
-                                </Border>
-                            </StackPanel>
-                        </Grid>
-
-                        <!-- Tab 1: Accuracy % & Difficult Keys Charts -->
-                        <Grid x:Name="AccuracyChartsPanel" Visibility="Collapsed" ColumnSpacing="20" HorizontalAlignment="Stretch">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" Spacing="8">
-                                <TextBlock Text="Accuracy (%)" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                                <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
-                                    <Canvas x:Name="AccuracyCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
-                                </Border>
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="1" Spacing="8">
-                                <TextBlock Text="Difficult Keys" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
-                                <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
-                                    <Canvas x:Name="DifficultKeysCanvas" Height="190" SizeChanged="ChartsCanvas_SizeChanged" />
-                                </Border>
-                            </StackPanel>
-                        </Grid>
                     </StackPanel>
                 </Border>
 
+                <!-- Weak Bigrams & Spaced-Repetition Due Review Keys (Native Canvas/Shapes) -->
+                <Grid Grid.Row="3" ColumnSpacing="18" HorizontalAlignment="Stretch">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource ForgeCardStyle}">
+                        <StackPanel Spacing="10">
+                            <Grid>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Weak Letter Pairs (Bigrams)" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <TextBlock Text="Slowest or most error-prone 2-letter transitions ranked by WeaknessScorer." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                </StackPanel>
+                                <Button
+                                    Content="Drill Slowest Pairs"
+                                    Style="{StaticResource ForgeSecondaryButtonStyle}"
+                                    Padding="10,5"
+                                    FontSize="12"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    AutomationProperties.Name="Drill slowest letter pairs"
+                                    Click="DrillSlowestPairs_Click" />
+                            </Grid>
+                            <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                                <Grid>
+                                    <controls:EmptyStateView
+                                        Kind="NoWeakKeys"
+                                        Visibility="{x:Bind ViewModel.IsNoWeakKeysEmpty, Mode=OneWay}" />
+                                    <Canvas x:Name="WeakBigramsCanvas" Height="175" Visibility="{x:Bind ViewModel.HasWeakKeys, Mode=OneWay}" SizeChanged="ChartsCanvas_SizeChanged" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="1" Style="{StaticResource ForgeCardStyle}">
+                        <StackPanel Spacing="10">
+                            <Grid>
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="Due for Spaced Review" FontSize="16" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                    <TextBlock Text="Keys scheduled by SM-2-lite review intervals for Today's Session." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                                </StackPanel>
+                                <Button
+                                    Content="Review Weak Keys"
+                                    Style="{StaticResource ForgeSecondaryButtonStyle}"
+                                    Padding="10,5"
+                                    FontSize="12"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Top"
+                                    AutomationProperties.Name="Review due and weak keys"
+                                    Click="DrillWeakKeys_Click" />
+                            </Grid>
+                            <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="10" Padding="12">
+                                <Canvas x:Name="DueReviewKeysCanvas" Height="175" SizeChanged="ChartsCanvas_SizeChanged" />
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
                 <!-- Interactive QWERTY Heatmap -->
-                <Border Grid.Row="3" Style="{StaticResource ForgeCardStyle}">
+                <Border Grid.Row="4" Style="{StaticResource ForgeCardStyle}">
                     <StackPanel Spacing="14">
                         <Grid>
                             <StackPanel Spacing="2">
@@ -167,6 +270,42 @@
                         </Grid>
 
                         <controls:VirtualKeyboardControl x:Name="StatsHeatmapKeyboard" HorizontalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Timed Test History -->
+                <Border Grid.Row="5" Style="{StaticResource ForgeCardStyle}">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Timed Test History" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Recent standalone typing tests (isolated from adaptive key unlock stages)." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+
+                        <controls:EmptyStateView
+                            Kind="NoTestHistory"
+                            Visibility="{x:Bind ViewModel.IsNoTestHistoryEmpty, Mode=OneWay}"
+                            ActionRequested="EmptyState_ActionRequested" />
+
+                        <StackPanel
+                            x:Name="TestHistoryListHost"
+                            Spacing="8"
+                            Visibility="{x:Bind ViewModel.HasTestHistory, Mode=OneWay}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Multi-Profile Leaderboard (visible when 2+ profiles exist) -->
+                <Border
+                    x:Name="ProfileLeaderboardCard"
+                    Grid.Row="6"
+                    Visibility="Collapsed"
+                    Style="{StaticResource ForgeCardStyle}">
+                    <StackPanel Spacing="14">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Profile Leaderboard" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Ranked across local profiles by Average Net WPM (tie-break: Accuracy %)." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="ProfileLeaderboardHost" Spacing="8" />
                     </StackPanel>
                 </Border>
             </Grid>

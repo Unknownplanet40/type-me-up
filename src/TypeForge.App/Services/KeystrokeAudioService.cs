@@ -1,4 +1,3 @@
-using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using TypeForge.Core.Models;
 
@@ -16,28 +15,47 @@ public interface IKeystrokeAudioService : IDisposable
 }
 
 /// <summary>
-/// Win32 PCM memory sound player for crisp tactile typing feedback.
+/// Persistent Win32 waveOut PCM sound player for crisp, low-latency, polyphonic typing feedback.
 /// </summary>
 public sealed class KeystrokeAudioService : IKeystrokeAudioService
 {
-    private const uint SndMemory = 0x0004;
-    private const uint SndAsync = 0x0001;
-    private const uint SndNoDefault = 0x0002;
-    private const uint Flags = SndMemory | SndAsync | SndNoDefault;
+    private const uint WaveMapper = 0xFFFFFFFF;
+    private const int SampleRate = 22050;
+    private const int RingSize = 8;
 
     private readonly object _lock = new();
-    private byte[] _clickWav = [];
-    private byte[] _mistakeWav = [];
+    private readonly WaveSlot[] _slots = new WaveSlot[RingSize];
+    private IntPtr _hWaveOut;
+    private int _nextSlot;
+
+    private byte[] _clickPcm = [];
+    private byte[] _mistakePcm = [];
     private GCHandle _clickHandle;
     private GCHandle _mistakeHandle;
+
     private SoundFeedbackMode _mode = SoundFeedbackMode.All;
     private SoundTheme _theme = SoundTheme.Default;
     private int _volumePercent = 80;
     private bool _disposed;
 
+    private sealed class WaveSlot
+    {
+        public IntPtr HeaderPtr;
+        public bool IsPrepared;
+    }
+
     public KeystrokeAudioService()
     {
+        for (int i = 0; i < RingSize; i++)
+        {
+            _slots[i] = new WaveSlot
+            {
+                HeaderPtr = Marshal.AllocHGlobal(Marshal.SizeOf<WaveHdr>())
+            };
+        }
+
         RebuildBuffers(_theme, _volumePercent);
+        EnsureDeviceOpen();
     }
 
     public void Configure(SoundFeedbackMode mode, SoundTheme theme, int volumePercent)
@@ -58,43 +76,131 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
     public void Preview(SoundTheme theme, int volumePercent)
     {
         int clampedVolume = Math.Clamp(volumePercent, 0, 100);
-        byte[] previewWav = BuildClickForTheme(theme, clampedVolume);
-        GCHandle handle = GCHandle.Alloc(previewWav, GCHandleType.Pinned);
-        try
+        byte[] previewPcm = BuildClickForTheme(theme, clampedVolume);
+        GCHandle handle = GCHandle.Alloc(previewPcm, GCHandleType.Pinned);
+        lock (_lock)
         {
-            _ = NativeMethods.PlaySoundW(handle.AddrOfPinnedObject(), IntPtr.Zero, Flags & ~SndAsync);
-        }
-        catch
-        {
-            // Ignore audio device absence on headless runners.
-        }
-        finally
-        {
-            if (handle.IsAllocated)
+            try
             {
-                handle.Free();
+                PlayBufferLocked(handle, previewPcm.Length);
+            }
+            finally
+            {
+                if (handle.IsAllocated)
+                {
+                    handle.Free();
+                }
             }
         }
     }
 
     public void PlayClick()
     {
-        if (_mode is not (SoundFeedbackMode.KeysOnly or SoundFeedbackMode.All) || _volumePercent <= 0)
+        lock (_lock)
         {
-            return;
-        }
+            if (_mode is not (SoundFeedbackMode.KeysOnly or SoundFeedbackMode.All) || _volumePercent <= 0)
+            {
+                return;
+            }
 
-        PlayPinnedBuffer(_clickHandle);
+            PlayBufferLocked(_clickHandle, _clickPcm.Length);
+        }
     }
 
     public void PlayMistake()
     {
-        if (_mode is not (SoundFeedbackMode.ErrorsOnly or SoundFeedbackMode.All) || _volumePercent <= 0)
+        lock (_lock)
+        {
+            if (_mode is not (SoundFeedbackMode.ErrorsOnly or SoundFeedbackMode.All) || _volumePercent <= 0)
+            {
+                return;
+            }
+
+            PlayBufferLocked(_mistakeHandle, _mistakePcm.Length);
+        }
+    }
+
+    private void EnsureDeviceOpen()
+    {
+        if (_disposed || _hWaveOut != IntPtr.Zero)
         {
             return;
         }
 
-        PlayPinnedBuffer(_mistakeHandle);
+        var format = new WaveFormatEx
+        {
+            wFormatTag = 1, // WAVE_FORMAT_PCM
+            nChannels = 1,
+            nSamplesPerSec = SampleRate,
+            nAvgBytesPerSec = SampleRate * sizeof(short),
+            nBlockAlign = sizeof(short),
+            wBitsPerSample = 16,
+            cbSize = 0
+        };
+
+        try
+        {
+            int result = NativeMethods.waveOutOpen(out _hWaveOut, WaveMapper, ref format, IntPtr.Zero, IntPtr.Zero, 0);
+            if (result != 0)
+            {
+                _hWaveOut = IntPtr.Zero;
+            }
+        }
+        catch
+        {
+            _hWaveOut = IntPtr.Zero;
+        }
+    }
+
+    private void PlayBufferLocked(GCHandle pcmHandle, int byteLength)
+    {
+        if (_disposed || !pcmHandle.IsAllocated || byteLength <= 0)
+        {
+            return;
+        }
+
+        EnsureDeviceOpen();
+        if (_hWaveOut == IntPtr.Zero)
+        {
+            return;
+        }
+
+        try
+        {
+            WaveSlot slot = _slots[_nextSlot];
+            _nextSlot = (_nextSlot + 1) % RingSize;
+
+            int hdrSize = Marshal.SizeOf<WaveHdr>();
+            if (slot.IsPrepared)
+            {
+                _ = NativeMethods.waveOutUnprepareHeader(_hWaveOut, slot.HeaderPtr, hdrSize);
+                slot.IsPrepared = false;
+            }
+
+            var hdr = new WaveHdr
+            {
+                lpData = pcmHandle.AddrOfPinnedObject(),
+                dwBufferLength = (uint)byteLength,
+                dwBytesRecorded = 0,
+                dwUser = IntPtr.Zero,
+                dwFlags = 0,
+                dwLoops = 0,
+                lpNext = IntPtr.Zero,
+                reserved = IntPtr.Zero
+            };
+
+            Marshal.StructureToPtr(hdr, slot.HeaderPtr, fDeleteOld: false);
+
+            if (NativeMethods.waveOutPrepareHeader(_hWaveOut, slot.HeaderPtr, hdrSize) == 0)
+            {
+                slot.IsPrepared = true;
+                _ = NativeMethods.waveOutWrite(_hWaveOut, slot.HeaderPtr, hdrSize);
+            }
+        }
+        catch
+        {
+            // Ignore audio device absence or driver errors on headless runners.
+        }
     }
 
     private void RebuildBuffers(SoundTheme theme, int volumePercent)
@@ -104,11 +210,32 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
             return;
         }
 
+        if (_hWaveOut != IntPtr.Zero)
+        {
+            try
+            {
+                _ = NativeMethods.waveOutReset(_hWaveOut);
+                int hdrSize = Marshal.SizeOf<WaveHdr>();
+                foreach (WaveSlot slot in _slots)
+                {
+                    if (slot.IsPrepared)
+                    {
+                        _ = NativeMethods.waveOutUnprepareHeader(_hWaveOut, slot.HeaderPtr, hdrSize);
+                        slot.IsPrepared = false;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore reset failures during buffer rebuild.
+            }
+        }
+
         FreeHandles();
-        _clickWav = BuildClickForTheme(theme, volumePercent);
-        _mistakeWav = BuildMistakeForTheme(theme, volumePercent);
-        _clickHandle = GCHandle.Alloc(_clickWav, GCHandleType.Pinned);
-        _mistakeHandle = GCHandle.Alloc(_mistakeWav, GCHandleType.Pinned);
+        _clickPcm = BuildClickForTheme(theme, volumePercent);
+        _mistakePcm = BuildMistakeForTheme(theme, volumePercent);
+        _clickHandle = GCHandle.Alloc(_clickPcm, GCHandleType.Pinned);
+        _mistakeHandle = GCHandle.Alloc(_mistakePcm, GCHandleType.Pinned);
     }
 
     private static byte[] BuildClickForTheme(SoundTheme theme, int volumePercent)
@@ -116,10 +243,10 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
         double scale = Math.Clamp(volumePercent / 100.0, 0.0, 1.0);
         return theme switch
         {
-            SoundTheme.Mechanical => BuildPcmWav(22050, 22, 820, 240, 0.34 * scale, isClick: true),
-            SoundTheme.Typewriter => BuildPcmWav(22050, 26, 1650, 580, 0.36 * scale, isClick: true),
-            SoundTheme.Soft => BuildPcmWav(22050, 16, 680, 320, 0.16 * scale, isClick: true),
-            _ => BuildPcmWav(22050, 18, 1150, 420, 0.28 * scale, isClick: true)
+            SoundTheme.Mechanical => BuildPcmSamples(38, 920, 260, 0.65 * scale, isClick: true),
+            SoundTheme.Typewriter => BuildPcmSamples(42, 1750, 520, 0.68 * scale, isClick: true),
+            SoundTheme.Soft => BuildPcmSamples(32, 680, 290, 0.42 * scale, isClick: true),
+            _ => BuildPcmSamples(36, 1250, 380, 0.60 * scale, isClick: true)
         };
     }
 
@@ -128,9 +255,44 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
         double scale = Math.Clamp(volumePercent / 100.0, 0.0, 1.0);
         return theme switch
         {
-            SoundTheme.Soft => BuildPcmWav(22050, 45, 190, 145, 0.22 * scale, isClick: false),
-            _ => BuildPcmWav(22050, 55, 210, 150, 0.32 * scale, isClick: false)
+            SoundTheme.Soft => BuildPcmSamples(70, 210, 145, 0.48 * scale, isClick: false),
+            _ => BuildPcmSamples(80, 230, 140, 0.65 * scale, isClick: false)
         };
+    }
+
+    private static byte[] BuildPcmSamples(
+        int durationMs,
+        double baseFrequencyHz,
+        double sweepEndHz,
+        double amplitude,
+        bool isClick)
+    {
+        int sampleCount = Math.Max(1, (SampleRate * durationMs) / 1000);
+        byte[] pcm = new byte[sampleCount * sizeof(short)];
+
+        double phase = 0.0;
+        for (int i = 0; i < sampleCount; i++)
+        {
+            double progress = (double)i / sampleCount;
+            double freq = baseFrequencyHz + ((sweepEndHz - baseFrequencyHz) * progress);
+            phase += (2.0 * Math.PI * freq) / SampleRate;
+
+            double attack = Math.Min(1.0, i / 24.0);
+            double envelope = isClick
+                ? attack * Math.Exp(-4.5 * progress)
+                : attack * Math.Sin(Math.PI * progress) * Math.Exp(-1.6 * progress);
+
+            double wave = isClick
+                ? Math.Sin(phase) + (0.4 * Math.Sin(phase * 2.3))
+                : Math.Sin(phase) + (0.3 * Math.Sin(phase * 1.5));
+
+            double normalized = Math.Clamp(wave * amplitude * envelope, -1.0, 1.0);
+            short sample = (short)(normalized * short.MaxValue);
+            pcm[i * 2] = (byte)(sample & 0xFF);
+            pcm[(i * 2) + 1] = (byte)((sample >> 8) & 0xFF);
+        }
+
+        return pcm;
     }
 
     private void FreeHandles()
@@ -146,114 +308,103 @@ public sealed class KeystrokeAudioService : IKeystrokeAudioService
         }
     }
 
-    private void PlayPinnedBuffer(GCHandle handle)
-    {
-        if (_disposed || !handle.IsAllocated)
-        {
-            return;
-        }
-
-        try
-        {
-            _ = NativeMethods.PlaySoundW(handle.AddrOfPinnedObject(), IntPtr.Zero, Flags);
-        }
-        catch
-        {
-            // Ignore audio device absence on headless runners.
-        }
-    }
-
     public void Dispose()
     {
-        if (_disposed)
+        lock (_lock)
         {
-            return;
-        }
+            if (_disposed)
+            {
+                return;
+            }
 
-        _disposed = true;
-        try
-        {
-            _ = NativeMethods.PlaySoundW(IntPtr.Zero, IntPtr.Zero, 0);
-        }
-        catch
-        {
-            // Ignore shutdown audio errors.
-        }
+            _disposed = true;
+            if (_hWaveOut != IntPtr.Zero)
+            {
+                try
+                {
+                    _ = NativeMethods.waveOutReset(_hWaveOut);
+                    int hdrSize = Marshal.SizeOf<WaveHdr>();
+                    foreach (WaveSlot slot in _slots)
+                    {
+                        if (slot.IsPrepared)
+                        {
+                            _ = NativeMethods.waveOutUnprepareHeader(_hWaveOut, slot.HeaderPtr, hdrSize);
+                            slot.IsPrepared = false;
+                        }
+                    }
 
-        FreeHandles();
+                    _ = NativeMethods.waveOutClose(_hWaveOut);
+                }
+                catch
+                {
+                    // Ignore shutdown audio errors.
+                }
+
+                _hWaveOut = IntPtr.Zero;
+            }
+
+            foreach (WaveSlot slot in _slots)
+            {
+                if (slot.HeaderPtr != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(slot.HeaderPtr);
+                    slot.HeaderPtr = IntPtr.Zero;
+                }
+            }
+
+            FreeHandles();
+        }
     }
 
-    private static byte[] BuildPcmWav(
-        int sampleRate,
-        int durationMs,
-        double baseFrequencyHz,
-        double sweepEndHz,
-        double amplitude,
-        bool isClick)
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WaveFormatEx
     {
-        int sampleCount = Math.Max(1, (sampleRate * durationMs) / 1000);
-        int dataSize = sampleCount * sizeof(short);
-        byte[] wav = new byte[44 + dataSize];
-        Span<byte> span = wav.AsSpan();
+        public ushort wFormatTag;
+        public ushort nChannels;
+        public uint nSamplesPerSec;
+        public uint nAvgBytesPerSec;
+        public ushort nBlockAlign;
+        public ushort wBitsPerSample;
+        public ushort cbSize;
+    }
 
-        // RIFF header
-        wav[0] = (byte)'R';
-        wav[1] = (byte)'I';
-        wav[2] = (byte)'F';
-        wav[3] = (byte)'F';
-        BinaryPrimitives.WriteInt32LittleEndian(span[4..8], 36 + dataSize);
-        wav[8] = (byte)'W';
-        wav[9] = (byte)'A';
-        wav[10] = (byte)'V';
-        wav[11] = (byte)'E';
-
-        // fmt subchunk
-        wav[12] = (byte)'f';
-        wav[13] = (byte)'m';
-        wav[14] = (byte)'t';
-        wav[15] = (byte)' ';
-        BinaryPrimitives.WriteInt32LittleEndian(span[16..20], 16);
-        BinaryPrimitives.WriteInt16LittleEndian(span[20..22], 1); // PCM
-        BinaryPrimitives.WriteInt16LittleEndian(span[22..24], 1); // Mono
-        BinaryPrimitives.WriteInt32LittleEndian(span[24..28], sampleRate);
-        BinaryPrimitives.WriteInt32LittleEndian(span[28..32], sampleRate * sizeof(short));
-        BinaryPrimitives.WriteInt16LittleEndian(span[32..34], sizeof(short));
-        BinaryPrimitives.WriteInt16LittleEndian(span[34..36], 16);
-
-        // data subchunk
-        wav[36] = (byte)'d';
-        wav[37] = (byte)'a';
-        wav[38] = (byte)'t';
-        wav[39] = (byte)'a';
-        BinaryPrimitives.WriteInt32LittleEndian(span[40..44], dataSize);
-
-        double phase = 0.0;
-        for (int i = 0; i < sampleCount; i++)
-        {
-            double progress = (double)i / sampleCount;
-            double freq = baseFrequencyHz + ((sweepEndHz - baseFrequencyHz) * progress);
-            phase += (2.0 * Math.PI * freq) / sampleRate;
-
-            double envelope = isClick
-                ? Math.Exp(-7.5 * progress)
-                : Math.Sin(Math.PI * progress) * Math.Exp(-2.2 * progress);
-
-            double wave = isClick
-                ? Math.Sin(phase) + (0.35 * Math.Sin(phase * 2.4))
-                : Math.Sin(phase) + (0.25 * Math.Sin(phase * 1.5));
-
-            double normalized = Math.Clamp(wave * amplitude * envelope, -1.0, 1.0);
-            short sample = (short)(normalized * short.MaxValue);
-            BinaryPrimitives.WriteInt16LittleEndian(span[(44 + (i * 2))..(46 + (i * 2))], sample);
-        }
-
-        return wav;
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WaveHdr
+    {
+        public IntPtr lpData;
+        public uint dwBufferLength;
+        public uint dwBytesRecorded;
+        public IntPtr dwUser;
+        public uint dwFlags;
+        public uint dwLoops;
+        public IntPtr lpNext;
+        public IntPtr reserved;
     }
 
     private static class NativeMethods
     {
-        [DllImport("winmm.dll", EntryPoint = "PlaySoundW", SetLastError = false)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool PlaySoundW(IntPtr pszSound, IntPtr hmod, uint fdwSound);
+        [DllImport("winmm.dll")]
+        internal static extern int waveOutOpen(
+            out IntPtr phwo,
+            uint uDeviceID,
+            ref WaveFormatEx pwfx,
+            IntPtr dwCallback,
+            IntPtr dwInstance,
+            uint fdwOpen);
+
+        [DllImport("winmm.dll")]
+        internal static extern int waveOutPrepareHeader(IntPtr hwo, IntPtr pwh, int cbwh);
+
+        [DllImport("winmm.dll")]
+        internal static extern int waveOutUnprepareHeader(IntPtr hwo, IntPtr pwh, int cbwh);
+
+        [DllImport("winmm.dll")]
+        internal static extern int waveOutWrite(IntPtr hwo, IntPtr pwh, int cbwh);
+
+        [DllImport("winmm.dll")]
+        internal static extern int waveOutReset(IntPtr hwo);
+
+        [DllImport("winmm.dll")]
+        internal static extern int waveOutClose(IntPtr hwo);
     }
 }

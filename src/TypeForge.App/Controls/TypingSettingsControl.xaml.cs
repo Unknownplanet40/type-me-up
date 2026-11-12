@@ -44,6 +44,16 @@ public sealed partial class TypingSettingsControl : UserControl
             ChkForgiveErrors.IsChecked = settings.ForgiveErrors;
             ChkSpaceSkipsWords.IsChecked = settings.SpaceSkipsWords;
 
+            RadioPaceOff.IsChecked = settings.PaceCaretMode == PaceCaretMode.Off;
+            RadioPaceFixed.IsChecked = settings.PaceCaretMode == PaceCaretMode.FixedWpm;
+            RadioPacePersonalBest.IsChecked = settings.PaceCaretMode == PaceCaretMode.PersonalBest;
+            RadioPaceLastSession.IsChecked = settings.PaceCaretMode == PaceCaretMode.LastSession;
+            PaceFixedWpmRow.Visibility = settings.PaceCaretMode == PaceCaretMode.FixedWpm ? Visibility.Visible : Visibility.Collapsed;
+
+            int paceWpm = Math.Clamp(settings.PaceTargetWpm, UserSettings.MinPaceTargetWpm, UserSettings.MaxPaceTargetWpm);
+            SliderPaceTargetWpm.Value = paceWpm;
+            TxtPaceTargetWpm.Text = $"{paceWpm} WPM";
+
             int fontIdx = 0;
             for (int i = 0; i < TypingStreamView.AvailableFonts.Count; i++)
             {
@@ -98,6 +108,8 @@ public sealed partial class TypingSettingsControl : UserControl
         settings.StopOnError = ChkStopOnError.IsChecked == true;
         settings.ForgiveErrors = ChkForgiveErrors.IsChecked == true;
         settings.SpaceSkipsWords = ChkSpaceSkipsWords.IsChecked == true;
+        settings.PaceCaretMode = GetSelectedPaceCaretMode();
+        settings.PaceTargetWpm = Math.Clamp((int)Math.Round(SliderPaceTargetWpm.Value), UserSettings.MinPaceTargetWpm, UserSettings.MaxPaceTargetWpm);
 
         int fontIdx = Math.Clamp(ComboFont.SelectedIndex, 0, TypingStreamView.AvailableFonts.Count - 1);
         settings.TypingFontSelection = TypingStreamView.AvailableFonts[fontIdx];
@@ -278,5 +290,42 @@ public sealed partial class TypingSettingsControl : UserControl
         var theme = (SoundTheme)Math.Clamp(ComboSoundTheme.SelectedIndex, 0, SoundThemeNames.Length - 1);
         int volume = Math.Clamp((int)Math.Round(SliderSoundVolume.Value), 0, 100);
         App.GetService<IKeystrokeAudioService>().Preview(theme, volume);
+    }
+
+    private PaceCaretMode GetSelectedPaceCaretMode()
+    {
+        if (RadioPaceFixed.IsChecked == true)
+        {
+            return PaceCaretMode.FixedWpm;
+        }
+
+        if (RadioPacePersonalBest.IsChecked == true)
+        {
+            return PaceCaretMode.PersonalBest;
+        }
+
+        if (RadioPaceLastSession.IsChecked == true)
+        {
+            return PaceCaretMode.LastSession;
+        }
+
+        return PaceCaretMode.Off;
+    }
+
+    private void PaceModeRadio_Checked(object sender, RoutedEventArgs e)
+    {
+        if (PaceFixedWpmRow is not null && RadioPaceFixed is not null)
+        {
+            PaceFixedWpmRow.Visibility = RadioPaceFixed.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        }
+    }
+
+    private void PaceWpmSlider_Changed(object sender, RangeBaseValueChangedEventArgs e)
+    {
+        if (TxtPaceTargetWpm is not null)
+        {
+            int wpm = Math.Clamp((int)Math.Round(e.NewValue), UserSettings.MinPaceTargetWpm, UserSettings.MaxPaceTargetWpm);
+            TxtPaceTargetWpm.Text = $"{wpm} WPM";
+        }
     }
 }

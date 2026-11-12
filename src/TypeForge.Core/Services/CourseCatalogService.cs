@@ -10,6 +10,7 @@ public sealed class CourseCatalogService
     private readonly ITypeForgeRepository _repository;
     private IReadOnlyList<CourseTrack> _tracks = [];
     private Dictionary<string, CourseExercise> _exerciseMap = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, CourseUnit> _unitByExerciseMap = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Initializes a course catalog service backed by <see cref="ITypeForgeRepository"/>.</summary>
     public CourseCatalogService(ITypeForgeRepository repository)
@@ -29,6 +30,7 @@ public sealed class CourseCatalogService
         IReadOnlyDictionary<string, LessonProgressRecord> saved = await _repository.LoadExerciseProgressAsync(ct).ConfigureAwait(false);
 
         var map = new Dictionary<string, CourseExercise>(StringComparer.OrdinalIgnoreCase);
+        var unitMap = new Dictionary<string, CourseUnit>(StringComparer.OrdinalIgnoreCase);
         foreach (CourseTrack track in tracks)
         {
             bool firstExercise = true;
@@ -51,12 +53,14 @@ public sealed class CourseCatalogService
 
                     firstExercise = false;
                     map[ex.ExerciseId] = ex;
+                    unitMap[ex.ExerciseId] = unit;
                 }
             }
         }
 
         _tracks = tracks;
         _exerciseMap = map;
+        _unitByExerciseMap = unitMap;
         return _tracks;
     }
 
@@ -104,7 +108,14 @@ public sealed class CourseCatalogService
     }
 
     /// <summary>Evaluates and persists a typed course exercise run, unlocking the subsequent step when passed.</summary>
-    public async Task<CourseOutcome> ApplyExerciseResultAsync(SessionResult result, CancellationToken ct = default)
+    public Task<CourseOutcome> ApplyExerciseResultAsync(SessionResult result, CancellationToken ct = default) =>
+        ApplyExerciseResultAsync(result, settings: null, ct);
+
+    /// <summary>Evaluates and persists a typed course exercise run using configurable pass-gate settings.</summary>
+    public async Task<CourseOutcome> ApplyExerciseResultAsync(
+        SessionResult result,
+        UserSettings? settings,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(result);
 
@@ -123,8 +134,22 @@ public sealed class CourseCatalogService
             return new CourseOutcome(false, 0, null);
         }
 
-        bool passed = exercise.EvaluatePass(result.NetWpm, result.AccuracyPercentage);
-        int earnedStars = exercise.CalculateStars(result.NetWpm, result.AccuracyPercentage);
+        bool gateEnabled = settings?.CoursePassGateEnabled ?? true;
+        double minAcc = settings?.CourseMinAccuracy ?? 90.0;
+        int maxMistakes = settings?.CourseMaxMistakes ?? 5;
+
+        bool passed = exercise.EvaluatePass(result.NetWpm, result.AccuracyPercentage, result.Mistakes, gateEnabled, minAcc, maxMistakes);
+        int earnedStars = exercise.CalculateStars(result.NetWpm, result.AccuracyPercentage, result.Mistakes, gateEnabled, minAcc, maxMistakes);
+
+        if (gateEnabled
+            && passed
+            && _unitByExerciseMap.TryGetValue(exercise.ExerciseId, out CourseUnit? parentUnit)
+            && parentUnit.IsFinalExercise(exercise)
+            && CourseUnit.EvaluateMissedFocusKeys(parentUnit, exercise, result.KeyBreakdown).Count > 0)
+        {
+            passed = false;
+            earnedStars = 0;
+        }
 
         exercise.IsUnlocked = true;
         exercise.IsCompleted = exercise.IsCompleted || passed;

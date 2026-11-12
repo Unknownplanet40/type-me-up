@@ -41,11 +41,11 @@
       <uap:VisualElements
         DisplayName="TypeForge"
         Description="Offline-first adaptive touch typing tutor for Windows"
-        BackgroundColor="transparent"
+        BackgroundColor="#0D0D0D"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
-        <uap:SplashScreen Image="Assets\SplashScreen.png" />
+        <uap:SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#0D0D0D" />
       </uap:VisualElements>
     </Application>
   </Applications>

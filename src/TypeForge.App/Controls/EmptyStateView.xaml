@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<UserControl
+    x:Class="TypeForge.App.Controls.EmptyStateView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="360" Spacing="12">
+        <Border x:Name="Panel" CornerRadius="12" HorizontalAlignment="Center">
+            <Image
+                x:Name="Illustration"
+                Width="280"
+                Stretch="Uniform"
+                AutomationProperties.AccessibilityView="Raw" />
+        </Border>
+        <TextBlock
+            x:Name="TitleText"
+            HorizontalAlignment="Center"
+            TextAlignment="Center"
+            FontSize="16"
+            FontWeight="SemiBold"
+            Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+        <TextBlock
+            x:Name="MessageText"
+            HorizontalAlignment="Center"
+            TextAlignment="Center"
+            FontSize="12"
+            TextWrapping="Wrap"
+            Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+        <Button
+            x:Name="ActionButton"
+            Style="{StaticResource ForgePrimaryButtonStyle}"
+            AllowFocusOnInteraction="False"
+            HorizontalAlignment="Center"
+            Visibility="Collapsed"
+            Click="OnActionClick" />
+    </StackPanel>
+</UserControl>

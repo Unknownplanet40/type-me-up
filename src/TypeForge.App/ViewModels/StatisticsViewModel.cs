@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using TypeForge.App.Services;
+using TypeForge.Core.Engine;
 using TypeForge.Core.Models;
 using TypeForge.Core.Services;
 
@@ -18,7 +19,7 @@ public sealed partial class StatisticsViewModel : ObservableObject
     private string _averageAccuracyText = "100.0%";
 
     [ObservableProperty]
-    private string _todayGoalText = "0 / 30 min";
+    private string _todayGoalText = "0 / 15 min";
 
     [ObservableProperty]
     private string _streakText = "0 Days";
@@ -35,9 +36,45 @@ public sealed partial class StatisticsViewModel : ObservableObject
     public IReadOnlyList<SessionResult> ChronologicalSessions =>
         _state.Sessions.Take(16).Reverse().ToArray();
 
+    /// <summary>Gets 7-day weekly trend points (WPM and accuracy).</summary>
+    public IReadOnlyList<DailyTrendPoint> WeeklyTrend =>
+        StatisticsAggregator.BuildWeeklyTrend(_state.Sessions);
+
     /// <summary>Gets ranked difficult keys sorted hardest to easiest.</summary>
     public IReadOnlyList<DifficultKeyStat> DifficultKeys =>
         StatisticsAggregator.GetDifficultKeys(_state.AggregateKeyMetrics, minSampleCount: 3, maxCount: 14);
+
+    /// <summary>Gets ranked weak bigrams (slowest / error-prone letter pairs).</summary>
+    public IReadOnlyList<RankedWeakness<string>> WeakBigrams =>
+        WeaknessScorer.RankBigrams(_state.AggregateBigramMetrics.Values, minSamples: 3)
+            .Take(8)
+            .ToArray();
+
+    /// <summary>Gets spaced-repetition keys currently due for review.</summary>
+    public IReadOnlyList<char> DueReviewKeys =>
+        new ReviewScheduler().GetDueKeys(_state.ReviewSchedules.Values);
+
+    /// <summary>Gets upcoming or due spaced-repetition key schedules ordered by due timestamp.</summary>
+    public IReadOnlyList<KeyReviewScheduleRecord> UpcomingReviewSchedules =>
+        _state.ReviewSchedules.Values
+            .OrderBy(r => r.DueAt)
+            .Take(12)
+            .ToArray();
+
+    public bool IsNoStatsEmpty => _state.Sessions.Count == 0;
+
+    public bool HasStats => _state.Sessions.Count > 0;
+
+    public bool IsNoWeakKeysEmpty => WeakBigrams.Count == 0 && DifficultKeys.Count == 0;
+
+    public bool HasWeakKeys => !IsNoWeakKeysEmpty;
+
+    public IReadOnlyList<SessionResult> TimedTestSessions =>
+        _state.Sessions.Where(s => s.SessionType == SessionType.TimedTest).Take(8).ToArray();
+
+    public bool IsNoTestHistoryEmpty => TimedTestSessions.Count == 0;
+
+    public bool HasTestHistory => TimedTestSessions.Count > 0;
 
     public StatisticsViewModel(ITypeForgeStateService state, INavigationService navigation)
     {
@@ -53,6 +90,14 @@ public sealed partial class StatisticsViewModel : ObservableObject
         int doneMins = (int)Math.Floor(_state.TodayPracticedDuration.TotalMinutes);
         TodayGoalText = $"{doneMins} / {goalMins} min";
         StreakText = _state.StreakDays == 1 ? "1 Day" : $"{_state.StreakDays} Days";
+
+        OnPropertyChanged(nameof(IsNoStatsEmpty));
+        OnPropertyChanged(nameof(HasStats));
+        OnPropertyChanged(nameof(IsNoWeakKeysEmpty));
+        OnPropertyChanged(nameof(HasWeakKeys));
+        OnPropertyChanged(nameof(IsNoTestHistoryEmpty));
+        OnPropertyChanged(nameof(HasTestHistory));
+        OnPropertyChanged(nameof(TimedTestSessions));
 
         if (sessions.Count == 0)
         {
@@ -79,8 +124,27 @@ public sealed partial class StatisticsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void DrillSlowestPairs()
+    {
+        _state.QueueSlowestBigramDrill();
+        _navigation.NavigateTo("practice");
+    }
+
+    public void NavigateToRoute(string route)
+    {
+        _navigation.NavigateTo(route);
+    }
+
+    [RelayCommand]
     private void SelectChartTab(string tabIndexStr)
     {
-        SelectedChartTabIndex = int.TryParse(tabIndexStr, out int idx) && idx == 1 ? 1 : 0;
+        if (int.TryParse(tabIndexStr, out int idx) && idx is >= 0 and <= 2)
+        {
+            SelectedChartTabIndex = idx;
+        }
+        else
+        {
+            SelectedChartTabIndex = 0;
+        }
     }
 }

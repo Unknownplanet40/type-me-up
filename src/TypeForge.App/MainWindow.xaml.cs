@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Media;
 using TypeForge.App.Services;
 using TypeForge.App.ViewModels;
 using TypeForge.App.Views;
+using TypeForge.Core.Models;
 using Windows.Graphics;
 using Windows.System;
 using Windows.UI;
@@ -18,6 +19,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly INavigationService _navigation;
     private readonly IUpdateService _updateService;
+    private readonly ITypeForgeStateService _state;
     private readonly Dictionary<string, (TextBlock Label, Border Dot)> _routeIndicators;
 
     public MainWindowViewModel ViewModel { get; }
@@ -25,11 +27,13 @@ public sealed partial class MainWindow : Window
     public MainWindow(
         MainWindowViewModel viewModel,
         INavigationService navigation,
-        IUpdateService updateService)
+        IUpdateService updateService,
+        ITypeForgeStateService state)
     {
         ViewModel = viewModel;
         _navigation = navigation;
         _updateService = updateService;
+        _state = state;
         InitializeComponent();
 
         ExtendsContentIntoTitleBar = true;
@@ -37,7 +41,7 @@ public sealed partial class MainWindow : Window
         SetTitleBar(TitleBarDragRegion);
         AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
         AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
-        AppWindow.SetIcon("Assets/AppIcon.ico");
+        ApplyWindowIcon();
         ConfigureInitialWindowBounds();
 
         _routeIndicators = new Dictionary<string, (TextBlock, Border)>
@@ -80,10 +84,26 @@ public sealed partial class MainWindow : Window
         RootGrid.ActualThemeChanged += (_, _) => UpdateRouteStyles();
         _updateService.StateChanged += (_, _) =>
             DispatcherQueue.TryEnqueue(ApplyUpdateBadge);
+        _state.StateChanged += () =>
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                _navigation.ApplyTheme(_state.Settings.Theme);
+                UpdateProfileUi();
+            });
 
         ApplyUpdateBadge();
+        UpdateProfileUi();
 
         _navigation.NavigateTo("course");
+    }
+
+    private void ApplyWindowIcon()
+    {
+        string iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "TypeForge.ico");
+        if (File.Exists(iconPath))
+        {
+            AppWindow.SetIcon(iconPath);
+        }
     }
 
     private void ConfigureInitialWindowBounds()
@@ -131,7 +151,9 @@ public sealed partial class MainWindow : Window
         if (scale > 0 && AppWindow.TitleBar.RightInset > 0)
         {
             double rightInsetDips = AppWindow.TitleBar.RightInset / scale;
-            TopBarRightGroup.Margin = new Thickness(0, 0, rightInsetDips + 6, 0);
+            Thickness rightMargin = new(0, 0, rightInsetDips + 6, 0);
+            TopBarRightGroup.Margin = rightMargin;
+            BtnFocusExit.Margin = rightMargin;
         }
     }
 
@@ -139,14 +161,14 @@ public sealed partial class MainWindow : Window
     {
         if (isFocus)
         {
-            TopBarRow.Height = new GridLength(0);
-            TopBarContainer.Visibility = Visibility.Collapsed;
+            TopBarLeftGroup.Visibility = Visibility.Collapsed;
+            TopBarRightGroup.Visibility = Visibility.Collapsed;
             BtnFocusExit.Visibility = Visibility.Visible;
         }
         else
         {
-            TopBarRow.Height = new GridLength(32);
-            TopBarContainer.Visibility = Visibility.Visible;
+            TopBarLeftGroup.Visibility = Visibility.Visible;
+            TopBarRightGroup.Visibility = Visibility.Visible;
             BtnFocusExit.Visibility = Visibility.Collapsed;
         }
     }
@@ -276,5 +298,257 @@ public sealed partial class MainWindow : Window
             AppWindow.TitleBar.ButtonPressedBackgroundColor = Color.FromArgb(0x24, 0xFF, 0xFF, 0xFF);
             AppWindow.TitleBar.ButtonInactiveForegroundColor = Color.FromArgb(0xFF, 0x52, 0x52, 0x5B);
         }
+    }
+
+    private void UpdateProfileUi()
+    {
+        UserProfile active = _state.ActiveProfile;
+        ProfilePillName.Text = active.Name;
+        ProfilePillInitials.Text = active.Initials;
+        ProfilePillAvatar.Background = new SolidColorBrush(ProfileDialogs.ParseHexColor(active.AvatarColorHex));
+
+        bool showPicker = _state.ShouldShowProfilePickerOnLaunch;
+        ProfilePickerOverlay.Visibility = showPicker ? Visibility.Visible : Visibility.Collapsed;
+        if (showPicker)
+        {
+            RefreshProfilePickerOverlay();
+        }
+    }
+
+    private void RefreshProfilePickerOverlay()
+    {
+        ProfilePickerCardsHost.Children.Clear();
+        IReadOnlyList<ProfileRankingEntry> rankings = _state.GetProfileRankings();
+        bool showRank = rankings.Count >= 2;
+
+        foreach (ProfileRankingEntry entry in rankings)
+        {
+            UserProfile profile = entry.Profile;
+            bool isActive = string.Equals(profile.Id, _state.ActiveProfile.Id, StringComparison.OrdinalIgnoreCase);
+
+            var cardContent = new StackPanel
+            {
+                Spacing = 12,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Width = 172
+            };
+
+            var topRow = new Grid();
+            if (showRank)
+            {
+                var rankBadge = new Border
+                {
+                    Background = entry.Rank == 1
+                        ? new SolidColorBrush(Color.FromArgb(36, 167, 139, 250))
+                        : (Brush)Application.Current.Resources["ForgeSubtleSurfaceBrush"],
+                    BorderBrush = entry.Rank == 1
+                        ? (Brush)Application.Current.Resources["ForgePurpleBrush"]
+                        : (Brush)Application.Current.Resources["ForgeHairlineBrush"],
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(10),
+                    Padding = new Thickness(8, 2, 8, 2),
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Child = new TextBlock
+                    {
+                        Text = $"#{entry.Rank}",
+                        FontSize = 11,
+                        FontWeight = FontWeights.SemiBold,
+                        Foreground = entry.Rank == 1
+                            ? (Brush)Application.Current.Resources["ForgePurpleBrush"]
+                            : (Brush)Application.Current.Resources["ForgeTextSecondaryBrush"]
+                    }
+                };
+                topRow.Children.Add(rankBadge);
+            }
+
+            if (isActive)
+            {
+                var lastUsedBadge = new TextBlock
+                {
+                    Text = "Last used",
+                    FontSize = 11,
+                    Foreground = (Brush)Application.Current.Resources["ForgeTextMutedBrush"],
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                topRow.Children.Add(lastUsedBadge);
+            }
+
+            cardContent.Children.Add(topRow);
+
+            var avatar = new Border
+            {
+                Width = 56,
+                Height = 56,
+                CornerRadius = new CornerRadius(28),
+                Background = new SolidColorBrush(ProfileDialogs.ParseHexColor(profile.AvatarColorHex)),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Child = new TextBlock
+                {
+                    Text = profile.Initials,
+                    FontSize = 20,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = new SolidColorBrush(Colors.White),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            cardContent.Children.Add(avatar);
+
+            cardContent.Children.Add(new TextBlock
+            {
+                Text = profile.Name,
+                FontSize = 15,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = (Brush)Application.Current.Resources["ForgeTextPrimaryBrush"],
+                HorizontalAlignment = HorizontalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+
+            string statsLine = entry.SessionCount > 0
+                ? $"{entry.AverageNetWpm:0} WPM · {entry.CourseCompletionPercentage:0}% course"
+                : "New profile";
+            cardContent.Children.Add(new TextBlock
+            {
+                Text = statsLine,
+                FontSize = 12,
+                Foreground = (Brush)Application.Current.Resources["ForgeTextSecondaryBrush"],
+                HorizontalAlignment = HorizontalAlignment.Center
+            });
+
+            string capturedId = profile.Id;
+            var cardBtn = new Button
+            {
+                Content = cardContent,
+                Padding = new Thickness(16),
+                CornerRadius = new CornerRadius(12),
+                Background = (Brush)Application.Current.Resources["ForgeCardBrush"],
+                BorderBrush = isActive
+                    ? (Brush)Application.Current.Resources["ForgePurpleBrush"]
+                    : (Brush)Application.Current.Resources["ForgeHairlineBrush"],
+                BorderThickness = new Thickness(isActive ? 1.5 : 1)
+            };
+            Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(cardBtn, $"Continue as {profile.Name}");
+            cardBtn.Click += (_, _) => _state.SwitchProfile(capturedId);
+            ProfilePickerCardsHost.Children.Add(cardBtn);
+        }
+
+        var addCardContent = new StackPanel
+        {
+            Spacing = 12,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            Width = 156,
+            Height = 148,
+            Children =
+            {
+                new Border
+                {
+                    Width = 56,
+                    Height = 56,
+                    CornerRadius = new CornerRadius(28),
+                    BorderBrush = (Brush)Application.Current.Resources["ForgeHairlineBrush"],
+                    BorderThickness = new Thickness(1),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Child = new FontIcon
+                    {
+                        Glyph = "\uE710",
+                        FontSize = 20,
+                        Foreground = (Brush)Application.Current.Resources["ForgeTextSecondaryBrush"]
+                    }
+                },
+                new TextBlock
+                {
+                    Text = "New Profile",
+                    FontSize = 14,
+                    FontWeight = FontWeights.SemiBold,
+                    Foreground = (Brush)Application.Current.Resources["ForgeTextSecondaryBrush"],
+                    HorizontalAlignment = HorizontalAlignment.Center
+                }
+            }
+        };
+
+        var addBtn = new Button
+        {
+            Content = addCardContent,
+            Padding = new Thickness(16),
+            CornerRadius = new CornerRadius(12),
+            Background = new SolidColorBrush(Colors.Transparent),
+            BorderBrush = (Brush)Application.Current.Resources["ForgeHairlineBrush"],
+            BorderThickness = new Thickness(1)
+        };
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(addBtn, "Create new profile");
+        addBtn.Click += async (_, _) =>
+        {
+            if (RootGrid.XamlRoot is not null)
+            {
+                await ProfileDialogs.ShowCreateProfileDialogAsync(RootGrid.XamlRoot, _state);
+            }
+        };
+        ProfilePickerCardsHost.Children.Add(addBtn);
+    }
+
+    private void BtnProfilePill_Click(object sender, RoutedEventArgs e)
+    {
+        var flyout = new MenuFlyout();
+        IReadOnlyList<ProfileRankingEntry> rankings = _state.GetProfileRankings();
+        bool showRank = rankings.Count >= 2;
+
+        foreach (ProfileRankingEntry entry in rankings)
+        {
+            UserProfile profile = entry.Profile;
+            bool isActive = string.Equals(profile.Id, _state.ActiveProfile.Id, StringComparison.OrdinalIgnoreCase);
+            string rankPrefix = showRank ? $"#{entry.Rank}  " : string.Empty;
+            string activeSuffix = isActive ? " (Active)" : string.Empty;
+            string capturedId = profile.Id;
+
+            var item = new MenuFlyoutItem
+            {
+                Text = $"{rankPrefix}{profile.Name}{activeSuffix}",
+                Icon = isActive ? new FontIcon { Glyph = "\uE73E" } : new FontIcon { Glyph = "\uE77B" }
+            };
+            item.Click += (_, _) => _state.SwitchProfile(capturedId);
+            flyout.Items.Add(item);
+        }
+
+        flyout.Items.Add(new MenuFlyoutSeparator());
+
+        var newItem = new MenuFlyoutItem
+        {
+            Text = "New Profile...",
+            Icon = new FontIcon { Glyph = "\uE710" }
+        };
+        newItem.Click += async (_, _) =>
+        {
+            if (RootGrid.XamlRoot is not null)
+            {
+                await ProfileDialogs.ShowCreateProfileDialogAsync(RootGrid.XamlRoot, _state);
+            }
+        };
+        flyout.Items.Add(newItem);
+
+        var resetItem = new MenuFlyoutItem
+        {
+            Text = "Reset Progress (Fresh Start)...",
+            Icon = new FontIcon { Glyph = "\uE72C" }
+        };
+        resetItem.Click += async (_, _) =>
+        {
+            if (RootGrid.XamlRoot is not null)
+            {
+                await ProfileDialogs.ShowResetProgressDialogAsync(RootGrid.XamlRoot, _state);
+            }
+        };
+        flyout.Items.Add(resetItem);
+
+        var manageItem = new MenuFlyoutItem
+        {
+            Text = "Manage Profiles",
+            Icon = new FontIcon { Glyph = "\uE713" }
+        };
+        manageItem.Click += (_, _) => _navigation.NavigateTo("settings");
+        flyout.Items.Add(manageItem);
+
+        flyout.ShowAt(BtnProfilePill);
     }
 }

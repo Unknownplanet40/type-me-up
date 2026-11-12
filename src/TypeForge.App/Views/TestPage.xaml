@@ -75,14 +75,40 @@
             </Grid>
 
             <!-- Center Static Typing Stream (~5 lines viewport) -->
-            <controls:TypingStreamView
-                x:Name="TestStreamView"
-                Grid.Row="1"
-                MaxVisibleLines="5"
-                MaxWidth="920"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Center"
-                Padding="24,12" />
+            <Grid Grid.Row="1" MaxWidth="920" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <Border
+                    x:Name="CapsLockWarningBanner"
+                    Grid.Row="0"
+                    Visibility="Collapsed"
+                    Background="{ThemeResource ForgeYellowFillBrush}"
+                    BorderBrush="{ThemeResource ForgeYellowBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,7"
+                    Margin="0,0,0,10"
+                    HorizontalAlignment="Center"
+                    AutomationProperties.LiveSetting="Polite">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE7BA;" FontSize="13" Foreground="{ThemeResource ForgeYellowBrush}" VerticalAlignment="Center" />
+                        <TextBlock
+                            Text="Caps Lock is on — turn it off for lowercase letters."
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="{ThemeResource ForgeYellowBrush}"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+                <controls:TypingStreamView
+                    x:Name="TestStreamView"
+                    Grid.Row="1"
+                    MaxVisibleLines="5"
+                    HorizontalAlignment="Stretch"
+                    Padding="24,12" />
+            </Grid>
 
             <!-- Bottom Thin Stats Bar -->
             <TextBlock
@@ -149,14 +175,33 @@
                         <Run Text="{x:Bind ViewModel.ResultMistakes, Mode=OneWay}" />
                     </TextBlock>
 
-                    <Grid ColumnSpacing="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" Content="New Test" Style="{StaticResource ForgePrimaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnRestartTest_Click" />
-                        <Button Grid.Column="1" Content="Test Settings" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnOpenSettings_Click" />
-                    </Grid>
+                    <StackPanel Orientation="Horizontal" Spacing="16" HorizontalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Raw WPM:" FontSize="12" Foreground="{ThemeResource ForgeTextMutedBrush}" />
+                            <TextBlock Text="{x:Bind ViewModel.ResultRawWpm, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="Consistency:" FontSize="12" Foreground="{ThemeResource ForgeTextMutedBrush}" />
+                            <TextBlock Text="{x:Bind ViewModel.ResultConsistency, Mode=OneWay}" FontSize="12" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Spacing="8">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="New Test" Style="{StaticResource ForgePrimaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnRestartTest_Click" />
+                            <Button Grid.Column="1" Content="Test Settings" Style="{StaticResource ForgeSecondaryButtonStyle}" HorizontalAlignment="Stretch" Click="BtnOpenSettings_Click" />
+                        </Grid>
+                        <Button
+                            Visibility="{x:Bind ViewModel.HasMissedWords, Mode=OneWay}"
+                            Content="Practice Missed Words"
+                            Style="{StaticResource ForgeSecondaryButtonStyle}"
+                            HorizontalAlignment="Stretch"
+                            Command="{x:Bind ViewModel.PracticeMissedWordsCommand}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </Grid>
@@ -214,10 +259,11 @@
                         <Grid>
                             <!-- TAB 1: TEXT -->
                             <StackPanel x:Name="TextSettingsPanel" Spacing="14" Visibility="Visible">
-                                <StackPanel Orientation="Horizontal" Spacing="18">
+                                <StackPanel Orientation="Horizontal" Spacing="16">
                                     <RadioButton x:Name="RadioCommonWords" Content="Common words" GroupName="TestTextSource" Tag="CommonWords" Checked="TextSourceRadio_Checked" />
                                     <RadioButton x:Name="RadioPseudoWords" Content="Pseudo words" GroupName="TestTextSource" Tag="PseudoWords" Checked="TextSourceRadio_Checked" />
                                     <RadioButton x:Name="RadioBookParagraphs" Content="Book paragraphs" GroupName="TestTextSource" Tag="BookParagraphs" Checked="TextSourceRadio_Checked" />
+                                    <RadioButton x:Name="RadioRealWorldPools" Content="Real-world pools" GroupName="TestTextSource" Tag="RealWorldPools" Checked="TextSourceRadio_Checked" />
                                     <RadioButton x:Name="RadioCustomText" Content="Custom text" GroupName="TestTextSource" Tag="CustomText" Checked="TextSourceRadio_Checked" />
                                 </StackPanel>
 
@@ -360,6 +406,26 @@
 
                                     <!-- Paragraph Preview List -->
                                     <StackPanel x:Name="ParagraphPreviewsPanel" Spacing="4" />
+                                </StackPanel>
+
+                                <!-- Real-World Pools Sub-panel -->
+                                <StackPanel x:Name="RealWorldPoolsPanel" Spacing="12" Visibility="Collapsed">
+                                    <Grid ColumnSpacing="12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="240" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Pool:" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                                        <ComboBox x:Name="ComboRealWorldPool" Grid.Column="1" SelectedIndex="{x:Bind ViewModel.DraftSelectedPoolIndex, Mode=TwoWay}" HorizontalAlignment="Stretch" AutomationProperties.Name="Real-world pool selector" />
+                                        <TextBlock Grid.Column="2" Text="{x:Bind ViewModel.DraftPoolDescription, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                    </Grid>
+
+                                    <Border Background="{ThemeResource ForgeCardInnerBrush}" BorderBrush="{ThemeResource ForgeHairlineBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                                        <ScrollViewer Height="195" VerticalScrollBarVisibility="Auto">
+                                            <StackPanel x:Name="RealWorldPoolPreviewsPanel" Spacing="6" />
+                                        </ScrollViewer>
+                                    </Border>
                                 </StackPanel>
 
                                 <!-- Custom Text Sub-panel -->

@@ -113,6 +113,129 @@ public sealed class CourseUnit
 
     /// <summary>Gets the count of completed exercises in this unit.</summary>
     public int CompletedCount => Exercises.Count(e => e.IsCompleted);
+
+    /// <summary>Gets whether the specified exercise is the final step in this unit.</summary>
+    public bool IsFinalExercise(CourseExercise exercise)
+    {
+        ArgumentNullException.ThrowIfNull(exercise);
+        return Exercises.Count > 0
+            && string.Equals(Exercises[^1].ExerciseId, exercise.ExerciseId, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Parses <see cref="FocusKeys"/> into the distinct target characters taught in this unit.</summary>
+    public IReadOnlyList<char> GetFocusKeyCharacters()
+    {
+        if (string.IsNullOrWhiteSpace(FocusKeys))
+        {
+            return [];
+        }
+
+        string trimmed = FocusKeys.Trim();
+        if (string.Equals(trimmed, "A-Z.", StringComparison.OrdinalIgnoreCase))
+        {
+            var chars = new List<char>(27);
+            for (char c = 'a'; c <= 'z'; c++)
+            {
+                chars.Add(c);
+            }
+
+            chars.Add('.');
+            return chars;
+        }
+
+        if (string.Equals(trimmed, "hand-swap", StringComparison.OrdinalIgnoreCase))
+        {
+            return Exercises
+                .Where(e => e.Kind != CourseStepKind.Tip && !string.IsNullOrWhiteSpace(e.PracticeText))
+                .SelectMany(e => e.PracticeText)
+                .Where(c => !char.IsWhiteSpace(c))
+                .Select(char.ToLowerInvariant)
+                .Distinct()
+                .ToList();
+        }
+
+        var result = new List<char>();
+        var seen = new HashSet<char>();
+        foreach (char raw in trimmed)
+        {
+            if (char.IsWhiteSpace(raw) || raw == '·')
+            {
+                continue;
+            }
+
+            char normalized = char.IsLetter(raw) ? char.ToLowerInvariant(raw) : raw;
+            if (seen.Add(normalized))
+            {
+                result.Add(normalized);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Returns any unit focus keys that appeared in <paramref name="exercise"/> and had fewer than 100% correct keystrokes.
+    /// </summary>
+    public static IReadOnlyList<char> EvaluateMissedFocusKeys(
+        CourseUnit unit,
+        CourseExercise exercise,
+        IReadOnlyDictionary<char, KeyMetric> keyBreakdown)
+    {
+        ArgumentNullException.ThrowIfNull(unit);
+        ArgumentNullException.ThrowIfNull(exercise);
+        ArgumentNullException.ThrowIfNull(keyBreakdown);
+
+        IReadOnlyList<char> focusChars = unit.GetFocusKeyCharacters();
+        if (focusChars.Count == 0 || string.IsNullOrWhiteSpace(exercise.PracticeText))
+        {
+            return [];
+        }
+
+        var promptChars = new HashSet<char>(
+            exercise.PracticeText
+                .Where(c => !char.IsWhiteSpace(c))
+                .Select(c => char.IsLetter(c) ? char.ToLowerInvariant(c) : c));
+
+        var missed = new List<char>();
+        foreach (char target in focusChars)
+        {
+            if (!promptChars.Contains(target))
+            {
+                continue;
+            }
+
+            int total = 0;
+            int incorrect = 0;
+            if (char.IsLetter(target))
+            {
+                char lower = char.ToLowerInvariant(target);
+                char upper = char.ToUpperInvariant(target);
+                if (keyBreakdown.TryGetValue(lower, out KeyMetric? lowerMetric))
+                {
+                    total += lowerMetric.TotalKeystrokes;
+                    incorrect += lowerMetric.IncorrectKeystrokes;
+                }
+
+                if (upper != lower && keyBreakdown.TryGetValue(upper, out KeyMetric? upperMetric))
+                {
+                    total += upperMetric.TotalKeystrokes;
+                    incorrect += upperMetric.IncorrectKeystrokes;
+                }
+            }
+            else if (keyBreakdown.TryGetValue(target, out KeyMetric? exactMetric))
+            {
+                total += exactMetric.TotalKeystrokes;
+                incorrect += exactMetric.IncorrectKeystrokes;
+            }
+
+            if (total > 0 && incorrect > 0)
+            {
+                missed.Add(target);
+            }
+        }
+
+        return missed;
+    }
 }
 
 /// <summary>
@@ -137,7 +260,9 @@ public sealed class CourseExercise
         bool isCompleted = false,
         double bestWpm = 0.0,
         double bestAccuracy = 0.0,
-        int stars = 0)
+        int stars = 0,
+        bool? showWpm = null,
+        KeyboardFadeStage? defaultKeyboardFadeStage = null)
     {
         if (string.IsNullOrWhiteSpace(exerciseId))
         {
@@ -160,6 +285,8 @@ public sealed class CourseExercise
         BestWpm = bestWpm;
         BestAccuracy = bestAccuracy;
         Stars = stars;
+        ShowWpm = showWpm ?? !(string.Equals(trackId, "fast_touch", StringComparison.OrdinalIgnoreCase) && unitNumber <= 4);
+        DefaultKeyboardFadeStage = defaultKeyboardFadeStage ?? ResolveDefaultFadeStage(kind, unitNumber);
     }
 
     /// <summary>Gets the unique step identifier.</summary>
@@ -210,32 +337,97 @@ public sealed class CourseExercise
     /// <summary>Gets or sets highest earned stars (0–3).</summary>
     public int Stars { get; set; }
 
+    /// <summary>Gets whether WPM is shown by default for this lesson step (false on early accuracy-first lessons).</summary>
+    public bool ShowWpm { get; }
+
+    /// <summary>Gets the lesson's default virtual keyboard fade stage.</summary>
+    public KeyboardFadeStage DefaultKeyboardFadeStage { get; }
+
+    /// <summary>
+    /// Returns true if WPM should be displayed during this exercise (either enabled in lesson JSON, overridden in Settings, or once accuracy target is met).
+    /// </summary>
+    public bool ShouldDisplayWpm(bool userAlwaysShowWpmInCourse = false) =>
+        userAlwaysShowWpmInCourse || ShowWpm || (BestAccuracy >= MinimumAccuracy && MinimumAccuracy > 0);
+
+    /// <summary>
+    /// Resolves the effective <see cref="KeyboardFadeStage"/> combining the lesson default with any explicit user Settings override.
+    /// </summary>
+    public KeyboardFadeStage GetEffectiveKeyboardFadeStage(KeyboardFadeStage settingsOverrideStage) =>
+        settingsOverrideStage != KeyboardFadeStage.FullLabels ? settingsOverrideStage : DefaultKeyboardFadeStage;
+
     /// <summary>Evaluates whether a typed session passes this step's minimum requirements.</summary>
     public bool EvaluatePass(double netWpm, double accuracyPercentage) =>
-        Kind == CourseStepKind.Tip || (netWpm >= MinimumNetWpm && accuracyPercentage >= MinimumAccuracy);
+        EvaluatePass(netWpm, accuracyPercentage, mistakes: 0, passGateEnabled: false);
+
+    /// <summary>
+    /// Evaluates whether a typed session passes this step's minimum requirements and configurable pass gate.
+    /// </summary>
+    public bool EvaluatePass(
+        double netWpm,
+        double accuracyPercentage,
+        int mistakes,
+        bool passGateEnabled = true,
+        double settingsMinAccuracy = 90.0,
+        int settingsMaxMistakes = 5)
+    {
+        if (Kind == CourseStepKind.Tip)
+        {
+            return true;
+        }
+
+        double requiredAccuracy = passGateEnabled
+            ? Math.Max(MinimumAccuracy, settingsMinAccuracy)
+            : MinimumAccuracy;
+
+        if (passGateEnabled && mistakes > settingsMaxMistakes)
+        {
+            return false;
+        }
+
+        if (!ShowWpm && BestAccuracy < requiredAccuracy)
+        {
+            return accuracyPercentage >= requiredAccuracy;
+        }
+
+        return netWpm >= MinimumNetWpm && accuracyPercentage >= requiredAccuracy;
+    }
 
     /// <summary>Calculates star rating (0–3) for a typed exercise attempt.</summary>
-    public int CalculateStars(double netWpm, double accuracyPercentage)
+    public int CalculateStars(double netWpm, double accuracyPercentage) =>
+        CalculateStars(netWpm, accuracyPercentage, mistakes: 0, passGateEnabled: false);
+
+    /// <summary>Calculates star rating (0–3) for a typed exercise attempt with configurable pass gate.</summary>
+    public int CalculateStars(
+        double netWpm,
+        double accuracyPercentage,
+        int mistakes,
+        bool passGateEnabled = true,
+        double settingsMinAccuracy = 90.0,
+        int settingsMaxMistakes = 5)
     {
         if (Kind == CourseStepKind.Tip)
         {
             return 3;
         }
 
-        if (!EvaluatePass(netWpm, accuracyPercentage))
+        if (!EvaluatePass(netWpm, accuracyPercentage, mistakes, passGateEnabled, settingsMinAccuracy, settingsMaxMistakes))
         {
             return 0;
         }
 
+        double requiredAccuracy = passGateEnabled
+            ? Math.Max(MinimumAccuracy, settingsMinAccuracy)
+            : MinimumAccuracy;
+
         double threeStarWpm = Math.Max(MinimumNetWpm * 1.8, MinimumNetWpm + 16.0);
-        double threeStarAcc = Math.Min(100.0, Math.Max(MinimumAccuracy + 4.0, 97.5));
+        double threeStarAcc = Math.Min(100.0, Math.Max(requiredAccuracy + 4.0, 97.5));
         if (netWpm >= threeStarWpm && accuracyPercentage >= threeStarAcc)
         {
             return 3;
         }
 
         double twoStarWpm = Math.Max(MinimumNetWpm * 1.35, MinimumNetWpm + 7.0);
-        double twoStarAcc = Math.Min(100.0, MinimumAccuracy + 2.0);
+        double twoStarAcc = Math.Min(100.0, requiredAccuracy + 2.0);
         if (netWpm >= twoStarWpm && accuracyPercentage >= twoStarAcc)
         {
             return 2;
@@ -273,4 +465,12 @@ public sealed class CourseExercise
         int targetTokens = Math.Max(6, (int)Math.Ceiling(tokens.Length * 0.55));
         return string.Join(' ', tokens.Take(targetTokens));
     }
+
+    private static KeyboardFadeStage ResolveDefaultFadeStage(CourseStepKind kind, int unitNumber) => kind switch
+    {
+        CourseStepKind.NewKeys or CourseStepKind.KeyDrill => KeyboardFadeStage.FullLabels,
+        CourseStepKind.WordDrill => unitNumber >= 3 ? KeyboardFadeStage.UnlabeledWithBumps : KeyboardFadeStage.FullLabels,
+        CourseStepKind.ParagraphDrill => unitNumber >= 6 ? KeyboardFadeStage.Hidden : KeyboardFadeStage.UnlabeledWithBumps,
+        _ => KeyboardFadeStage.FullLabels
+    };
 }

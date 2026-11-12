@@ -29,10 +29,55 @@ public sealed record DifficultKeyStat(
     KeyDifficultyBand Band);
 
 /// <summary>
+/// Represents aggregated speed and accuracy metrics for a single calendar day in a 7-day weekly trend chart.
+/// </summary>
+public sealed record DailyTrendPoint(
+    DateOnly Date,
+    string DayLabel,
+    double AverageNetWpm,
+    double AverageAccuracyPercentage,
+    int SessionCount);
+
+/// <summary>
 /// Provides chart-ready benchmark classifications and difficult-key rankings.
 /// </summary>
 public static class StatisticsAggregator
 {
+    /// <summary>
+    /// Builds a chronological 7-day trend series ending on <paramref name="today"/> (or UTC today if omitted).
+    /// </summary>
+    public static IReadOnlyList<DailyTrendPoint> BuildWeeklyTrend(
+        IReadOnlyList<SessionResult> sessions,
+        DateOnly? today = null)
+    {
+        ArgumentNullException.ThrowIfNull(sessions);
+
+        DateOnly endDay = today ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var points = new List<DailyTrendPoint>(7);
+
+        for (int offset = 6; offset >= 0; offset--)
+        {
+            DateOnly day = endDay.AddDays(-offset);
+            List<SessionResult> daySessions = sessions
+                .Where(s => DateOnly.FromDateTime(s.StartedAt.UtcDateTime) == day)
+                .ToList();
+
+            string label = day.ToString("ddd", System.Globalization.CultureInfo.InvariantCulture);
+            if (daySessions.Count == 0)
+            {
+                points.Add(new DailyTrendPoint(day, label, 0.0, 0.0, 0));
+            }
+            else
+            {
+                double avgWpm = Math.Round(daySessions.Average(s => s.NetWpm), 1);
+                double avgAcc = Math.Round(daySessions.Average(s => s.AccuracyPercentage), 1);
+                points.Add(new DailyTrendPoint(day, label, avgWpm, avgAcc, daySessions.Count));
+            }
+        }
+
+        return points;
+    }
+
     /// <summary>
     /// Classifies key difficulty severity from error rate and mean latency.
     /// </summary>

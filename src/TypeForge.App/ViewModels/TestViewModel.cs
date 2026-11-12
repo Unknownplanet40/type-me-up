@@ -14,8 +14,10 @@ public sealed record BookParagraphPreviewItem(int ParagraphNumber, string Prefix
 public sealed partial class TestViewModel : ObservableObject
 {
     private readonly ITypeForgeStateService _state;
+    private readonly INavigationService _navigation;
     private readonly IKeystrokeAudioService _audio;
     private TypingEngine _engine = null!;
+    private IReadOnlyList<string> _lastMissedWords = [];
 
     [ObservableProperty]
     private TestDurationMode _selectedDurationMode = TestDurationMode.Seconds15;
@@ -40,6 +42,15 @@ public sealed partial class TestViewModel : ObservableObject
 
     [ObservableProperty]
     private string _resultMistakes = "0";
+
+    [ObservableProperty]
+    private string _resultRawWpm = "0.0";
+
+    [ObservableProperty]
+    private string _resultConsistency = "100.0%";
+
+    [ObservableProperty]
+    private bool _hasMissedWords;
 
     [ObservableProperty]
     private string _resultSourceSummary = string.Empty;
@@ -101,11 +112,25 @@ public sealed partial class TestViewModel : ObservableObject
     [ObservableProperty]
     private string _draftCustomText = string.Empty;
 
+    [ObservableProperty]
+    private int _draftSelectedPoolIndex;
+
+    [ObservableProperty]
+    private string _draftPoolDescription = string.Empty;
+
+    [ObservableProperty]
+    private int _ghostCaretIndex;
+
+    [ObservableProperty]
+    private bool _isPaceCaretVisible;
+
     private bool _isUpdatingDraftWords;
 
     public IReadOnlyList<string> AvailableLanguages { get; } = new List<string> { "English" };
     public List<string> BookTitles { get; } = [];
     public List<BookParagraphPreviewItem> ParagraphPreviews { get; } = [];
+    public List<string> PoolTitles { get; } = [];
+    public List<string> PoolPreviewItems { get; } = [];
 
     public TypingSnapshot? CurrentSnapshot { get; private set; }
     public UserSettings CurrentSettings => _state.Settings;
@@ -119,15 +144,22 @@ public sealed partial class TestViewModel : ObservableObject
     public event Action<TypingSnapshot>? SnapshotUpdated;
     public event Action? AppearanceUpdated;
     public event Action? ParagraphPreviewsUpdated;
+    public event Action? PoolPreviewsUpdated;
 
-    public TestViewModel(ITypeForgeStateService state, IKeystrokeAudioService audio)
+    public TestViewModel(ITypeForgeStateService state, INavigationService navigation, IKeystrokeAudioService audio)
     {
         _state = state;
+        _navigation = navigation;
         _audio = audio;
 
         foreach (BookModel book in _state.Books)
         {
             BookTitles.Add(book.Title);
+        }
+
+        foreach (RealWorldPoolModel pool in _state.RealWorldPools)
+        {
+            PoolTitles.Add(pool.Title);
         }
 
         SelectedDurationMode = _state.Settings.TestDurationMode;
@@ -230,6 +262,8 @@ public sealed partial class TestViewModel : ObservableObject
         }
 
         UpdateStatsBar(snapshot, snapshot.Elapsed);
+        UpdatePaceCaretState(snapshot);
+        SnapshotUpdated?.Invoke(snapshot);
     }
 
     public void OpenSettingsDialog()
@@ -257,6 +291,12 @@ public sealed partial class TestViewModel : ObservableObject
         {
             s.SelectedBookId = selectedBook.Id;
             s.SelectedBookParagraphIndex = Math.Clamp(DraftParagraphNumber - 1, 0, selectedBook.Paragraphs.Count - 1);
+        }
+
+        RealWorldPoolModel? selectedPool = GetDraftPool();
+        if (selectedPool is not null)
+        {
+            s.SelectedRealWorldPoolId = selectedPool.Id;
         }
 
         s.CustomTestText = DraftCustomText;
@@ -310,6 +350,11 @@ public sealed partial class TestViewModel : ObservableObject
         RefreshBookParagraphPreviews();
     }
 
+    partial void OnDraftSelectedPoolIndexChanged(int value)
+    {
+        RefreshDraftPoolPreviews();
+    }
+
     private void LoadDraftFromSettings()
     {
         UserSettings s = _state.Settings;
@@ -340,6 +385,19 @@ public sealed partial class TestViewModel : ObservableObject
 
         DraftSelectedBookIndex = bookIdx;
         RefreshDraftBookMetadata(preserveParagraphIndex: true);
+
+        int poolIdx = 0;
+        for (int i = 0; i < _state.RealWorldPools.Count; i++)
+        {
+            if (string.Equals(_state.RealWorldPools[i].Id, s.SelectedRealWorldPoolId, StringComparison.OrdinalIgnoreCase))
+            {
+                poolIdx = i;
+                break;
+            }
+        }
+
+        DraftSelectedPoolIndex = poolIdx;
+        RefreshDraftPoolPreviews();
 
         DraftCustomText = s.CustomTestText;
     }
@@ -419,6 +477,42 @@ public sealed partial class TestViewModel : ObservableObject
         ParagraphPreviewsUpdated?.Invoke();
     }
 
+    private RealWorldPoolModel? GetDraftPool()
+    {
+        if (_state.RealWorldPools.Count == 0)
+        {
+            return null;
+        }
+
+        int idx = Math.Clamp(DraftSelectedPoolIndex, 0, _state.RealWorldPools.Count - 1);
+        return _state.RealWorldPools[idx];
+    }
+
+    private RealWorldPoolModel? GetActiveRealWorldPool() =>
+        _state.RealWorldPools.FirstOrDefault(
+            p => string.Equals(p.Id, _state.Settings.SelectedRealWorldPoolId, StringComparison.OrdinalIgnoreCase))
+        ?? _state.RealWorldPools.FirstOrDefault();
+
+    private void RefreshDraftPoolPreviews()
+    {
+        PoolPreviewItems.Clear();
+        RealWorldPoolModel? pool = GetDraftPool();
+        if (pool is null)
+        {
+            DraftPoolDescription = string.Empty;
+            PoolPreviewsUpdated?.Invoke();
+            return;
+        }
+
+        DraftPoolDescription = pool.Description;
+        foreach (string item in pool.Items)
+        {
+            PoolPreviewItems.Add(item);
+        }
+
+        PoolPreviewsUpdated?.Invoke();
+    }
+
     private string BuildTestPrompt(TestDurationMode mode)
     {
         int targetChars = TestTextGenerator.GetTargetCharactersForMode(mode);
@@ -428,6 +522,7 @@ public sealed partial class TestViewModel : ObservableObject
         {
             TestTextSource.PseudoWords => TestTextGenerator.GeneratePseudoWordsPrompt(Math.Max(targetChars, 140)),
             TestTextSource.BookParagraphs => BuildBookPrompt(targetChars),
+            TestTextSource.RealWorldPools => BuildRealWorldPoolPrompt(Math.Max(targetChars, 140)),
             TestTextSource.CustomText => BuildCustomPrompt(),
             _ => BuildCommonWordsPrompt(Math.Max(targetChars, 140))
         };
@@ -470,6 +565,17 @@ public sealed partial class TestViewModel : ObservableObject
             Math.Max(targetChars, 220));
     }
 
+    private string BuildRealWorldPoolPrompt(int targetChars)
+    {
+        RealWorldPoolModel? pool = GetActiveRealWorldPool();
+        if (pool is null)
+        {
+            return BuildCommonWordsPrompt(targetChars);
+        }
+
+        return TestTextGenerator.GenerateRealWorldPoolPrompt(pool, targetChars);
+    }
+
     private string BuildCustomPrompt()
     {
         string normalized = string.Join(' ', _state.Settings.CustomTestText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
@@ -483,12 +589,41 @@ public sealed partial class TestViewModel : ObservableObject
         TypingSnapshot snapshot = _engine.GetSnapshot();
         CurrentSnapshot = snapshot;
         UpdateStatsBar(snapshot, snapshot.Elapsed);
+        UpdatePaceCaretState(snapshot);
         SnapshotUpdated?.Invoke(snapshot);
 
         if (snapshot.IsCompleted && !IsResultsVisible)
         {
             FinalizeSession(snapshot.Elapsed);
         }
+    }
+
+    private void UpdatePaceCaretState(TypingSnapshot snapshot)
+    {
+        if (_state.Settings.PaceCaretMode == PaceCaretMode.Off
+            || snapshot.TotalKeystrokes == 0
+            || snapshot.IsCompleted
+            || IsResultsVisible)
+        {
+            IsPaceCaretVisible = false;
+            GhostCaretIndex = 0;
+            return;
+        }
+
+        double targetWpm = PaceCaretCalculator.ResolveTargetWpm(
+            _state.Settings.PaceCaretMode,
+            _state.Settings.PaceTargetWpm,
+            _state.Sessions);
+
+        if (targetWpm <= 0.0)
+        {
+            IsPaceCaretVisible = false;
+            GhostCaretIndex = 0;
+            return;
+        }
+
+        GhostCaretIndex = PaceCaretCalculator.GetGhostIndex(snapshot.Elapsed, targetWpm, snapshot.TargetText.Length);
+        IsPaceCaretVisible = true;
     }
 
     private void UpdateStatsBar(TypingSnapshot snapshot, TimeSpan elapsed)
@@ -524,10 +659,14 @@ public sealed partial class TestViewModel : ObservableObject
             };
         }
 
-        _state.RecordSession(built);
+        _state.RecordSession(built, _engine.GetBigramBreakdown());
 
         TimeSpan elapsed = built.Duration;
         ResultWpm = $"{built.NetWpm:0.0}";
+        ResultRawWpm = $"{built.GrossWpm:0.0}";
+        ResultConsistency = $"{_engine.GetConsistencyPercentage():0.0}%";
+        _lastMissedWords = _engine.GetMissedWords();
+        HasMissedWords = _lastMissedWords.Count > 0;
         ResultAccuracy = $"{built.AccuracyPercentage:0.00}%";
         ResultChars = $"{built.CorrectCharacters + built.UncorrectedErrors}";
         ResultElapsed = $"{(int)elapsed.TotalHours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}.{elapsed.Milliseconds / 10:00}";
@@ -536,6 +675,21 @@ public sealed partial class TestViewModel : ObservableObject
         UpdateStatsBar(_engine.GetSnapshot(), elapsed);
 
         IsResultsVisible = true;
+        IsPaceCaretVisible = false;
+    }
+
+    [RelayCommand]
+    public void PracticeMissedWords()
+    {
+        if (_lastMissedWords.Count == 0)
+        {
+            return;
+        }
+
+        IsResultsVisible = false;
+        string drillText = TypingEngine.BuildMissedWordsDrillText(_lastMissedWords);
+        _state.QueuePracticeSession("Missed Words Drill", drillText, SessionType.AdaptivePractice);
+        _navigation.NavigateTo("practice");
     }
 
     private static string SelectedDurationModeLabel(TestDurationMode mode) => mode switch
@@ -549,10 +703,11 @@ public sealed partial class TestViewModel : ObservableObject
         _ => "15 seconds"
     };
 
-    private static string SourceLabel(TestTextSource source) => source switch
+    private string SourceLabel(TestTextSource source) => source switch
     {
         TestTextSource.PseudoWords => "Pseudo words",
         TestTextSource.BookParagraphs => "Book paragraphs",
+        TestTextSource.RealWorldPools => GetActiveRealWorldPool()?.Title ?? "Real-world pools",
         TestTextSource.CustomText => "Custom text",
         _ => "Common words"
     };

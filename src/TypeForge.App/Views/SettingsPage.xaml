@@ -16,6 +16,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0" Spacing="4">
@@ -90,6 +91,42 @@
                         </StackPanel>
                         <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.ShowVirtualKeyboard, Mode=TwoWay}" OnContent="Visible" OffContent="Hidden" VerticalAlignment="Center" />
                     </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Keyboard Label Fade Stage" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Gradually fade on-screen key labels to build touch-typing memory without looking." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" Width="210" SelectedIndex="{x:Bind ViewModel.KeyboardFadeStageIndex, Mode=TwoWay}" AutomationProperties.Name="Keyboard label fade stage" VerticalAlignment="Center">
+                            <ComboBoxItem Content="Full Labels (Course Auto)" />
+                            <ComboBoxItem Content="Unlabeled + F/J Bumps" />
+                            <ComboBoxItem Content="Hidden Keyboard" />
+                        </ComboBox>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Ergonomic Finger Guide" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Show hand diagram highlighting the active finger for the next key." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" Width="210" SelectedIndex="{x:Bind ViewModel.FingerGuideModeIndex, Mode=TwoWay}" AutomationProperties.Name="Ergonomic finger guide mode" VerticalAlignment="Center">
+                            <ComboBoxItem Content="Course Lessons (Default)" />
+                            <ComboBoxItem Content="Always On" />
+                            <ComboBoxItem Content="Off" />
+                        </ComboBox>
+                    </Grid>
                 </StackPanel>
             </Border>
 
@@ -151,10 +188,54 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel Spacing="2">
-                            <TextBlock Text="Optimal Course Duration" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Skip ahead when mastered" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
                             <TextBlock Text="Shorten repetitive course drills automatically after 96%+ mastery on earlier steps." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                         </StackPanel>
-                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.OptimalDurationEnabled, Mode=TwoWay}" OnContent="Adaptive" OffContent="Full" AutomationProperties.Name="Optimal course duration" VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.OptimalDurationEnabled, Mode=TwoWay}" OnContent="Enabled" OffContent="Full" AutomationProperties.Name="Skip ahead when mastered" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Course Pass Gate" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Require minimum accuracy and maximum mistakes before unlocking the next course exercise." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.CoursePassGateEnabled, Mode=TwoWay}" OnContent="Enforced" OffContent="Off" AutomationProperties.Name="Course pass gate" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Grid ColumnSpacing="16" Visibility="{x:Bind ViewModel.CoursePassGateEnabled, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Minimum Course Accuracy" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Accuracy floor required to advance (stricter lesson targets still apply)." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <Slider Width="180" Minimum="50" Maximum="100" StepFrequency="1" Value="{x:Bind ViewModel.CourseMinAccuracy, Mode=TwoWay}" AutomationProperties.Name="Minimum course accuracy" />
+                            <TextBlock Text="{x:Bind ViewModel.CourseMinAccuracyLabel, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" VerticalAlignment="Center" Width="40" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid ColumnSpacing="16" Visibility="{x:Bind ViewModel.CoursePassGateEnabled, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Maximum Course Mistakes" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Maximum mistakes allowed per exercise before requiring a retry." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <Slider Width="180" Minimum="0" Maximum="50" StepFrequency="1" Value="{x:Bind ViewModel.CourseMaxMistakes, Mode=TwoWay}" AutomationProperties.Name="Maximum course mistakes" />
+                            <TextBlock Text="{x:Bind ViewModel.CourseMaxMistakesLabel, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" VerticalAlignment="Center" Width="76" />
+                        </StackPanel>
                     </Grid>
 
                     <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
@@ -190,6 +271,74 @@
                             <ComboBoxItem Content="Standard (500ms · 95%)" />
                             <ComboBoxItem Content="Pro (350ms · 98%)" />
                         </ComboBox>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Always Show WPM in Course Lessons" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="By default, early course lessons show accuracy only until the accuracy target is met once." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" IsOn="{x:Bind ViewModel.ShowWpmInCourse, Mode=TwoWay}" OnContent="Always Show" OffContent="Accuracy First" AutomationProperties.Name="Always show WPM in course lessons" VerticalAlignment="Center" />
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Pace Caret (Ghost Cursor)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Show a ghost reference caret moving at a target pace in Practice and Test." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <ComboBox Grid.Column="1" Width="210" SelectedIndex="{x:Bind ViewModel.PaceCaretModeIndex, Mode=TwoWay}" AutomationProperties.Name="Pace caret mode" VerticalAlignment="Center">
+                            <ComboBoxItem Content="Off" />
+                            <ComboBoxItem Content="Fixed WPM" />
+                            <ComboBoxItem Content="Personal Best" />
+                            <ComboBoxItem Content="Last Session" />
+                        </ComboBox>
+                    </Grid>
+
+                    <Grid ColumnSpacing="16" Visibility="{x:Bind ViewModel.IsFixedPaceCaretSelected, Mode=OneWay}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Fixed Pace Target WPM" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Target words per minute for the Fixed WPM pace caret (10 - 200 WPM)." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <Slider Width="180" Minimum="10" Maximum="200" StepFrequency="5" Value="{x:Bind ViewModel.PaceTargetWpm, Mode=TwoWay}" AutomationProperties.Name="Fixed pace WPM target" />
+                            <TextBlock Text="{x:Bind ViewModel.PaceTargetWpm, Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" VerticalAlignment="Center" Width="32" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Placement Diagnostic" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Run a 60-second common-words check to recalibrate your recommended course and unlocked keys." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                        </StackPanel>
+                        <Button
+                            Grid.Column="1"
+                            Content="Retake 60s Placement Test"
+                            Style="{StaticResource ForgeSecondaryButtonStyle}"
+                            Command="{x:Bind ViewModel.RetakePlacementTestCommand}"
+                            AutomationProperties.Name="Retake 60-second placement test"
+                            VerticalAlignment="Center" />
                     </Grid>
                 </StackPanel>
             </Border>
@@ -256,17 +405,94 @@
             </Border>
 
             <Border Grid.Row="4" Style="{StaticResource ForgeCardStyle}">
-                <Grid ColumnSpacing="16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
+                <StackPanel Spacing="14">
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Border Background="#0D0D0D" CornerRadius="10" Padding="10,6" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <Image
+                                Source="ms-appx:///Assets/Branding/typeforge-logo-lockup.png"
+                                Width="240"
+                                Stretch="Uniform"
+                                HorizontalAlignment="Left"
+                                AutomationProperties.Name="TypeForge" />
+                        </Border>
+                        <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.CurrentVersionDisplay, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                    </Grid>
                     <StackPanel Spacing="4">
                         <TextBlock Text="Privacy &amp; Local Storage" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
                         <TextBlock Text="All typing metrics, drills, and SQLite progress stay local on your PC with zero telemetry. Network requests run only when checking GitHub Releases for updates." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
                     </StackPanel>
-                    <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.CurrentVersionDisplay, Mode=OneWay}" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
-                </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="5" Style="{StaticResource ForgeCardStyle}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="Profiles &amp; Fresh Start" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <Border
+                                x:Name="SettingsProfileAvatar"
+                                Width="36"
+                                Height="36"
+                                CornerRadius="18"
+                                Background="{ThemeResource ForgePurpleBrush}">
+                                <TextBlock
+                                    x:Name="SettingsProfileInitials"
+                                    Text="D"
+                                    FontSize="14"
+                                    FontWeight="Bold"
+                                    Foreground="White"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="SettingsProfileName" Text="Default" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                                <TextBlock x:Name="SettingsProfileMeta" Text="1 profile on this device" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <ComboBox
+                                x:Name="ProfileSwitcherCombo"
+                                Width="170"
+                                SelectionChanged="ProfileSwitcherCombo_SelectionChanged"
+                                AutomationProperties.Name="Active user profile" />
+                            <Button Content="New Profile" Click="BtnNewProfile_Click" Style="{StaticResource ForgePrimaryButtonStyle}" />
+                            <Button Content="Rename" Click="BtnRenameProfile_Click" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Height="1" Background="{ThemeResource ForgeHairlineBrush}" />
+
+                    <Grid ColumnSpacing="16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="Fresh Start (Reset Progress)" FontSize="14" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
+                            <TextBlock Text="Clear sessions, stats, course progress, placement, and streaks for this profile while keeping app settings." FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button
+                                x:Name="BtnResetProgress"
+                                Content="Reset Progress"
+                                Click="BtnResetProgress_Click" />
+                            <Button
+                                x:Name="BtnDeleteProfile"
+                                Content="Delete Profile"
+                                Click="BtnDeleteProfile_Click" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
             </Border>
         </Grid>
     </ScrollViewer>

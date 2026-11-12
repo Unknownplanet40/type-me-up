@@ -69,6 +69,27 @@ public interface ITypeForgeRepository
 
     /// <summary>Returns distinct UTC dates on which at least one practice session occurred, newest first.</summary>
     Task<IReadOnlyList<DateOnly>> GetPracticeDatesAsync(CancellationToken ct = default);
+
+    /// <summary>Loads aggregated bigram transition metrics keyed by 2-character bigram.</summary>
+    Task<IReadOnlyDictionary<string, BigramMetric>> GetBigramStatisticsAsync(CancellationToken ct = default);
+
+    /// <summary>Upserts bigram transition metrics inside a transaction.</summary>
+    Task SaveBigramStatisticsAsync(IEnumerable<BigramMetric> bigrams, CancellationToken ct = default);
+
+    /// <summary>Loads persisted spaced-repetition review schedules keyed by character.</summary>
+    Task<IReadOnlyDictionary<char, KeyReviewScheduleRecord>> GetKeyReviewSchedulesAsync(CancellationToken ct = default);
+
+    /// <summary>Upserts spaced-repetition review schedules inside a transaction.</summary>
+    Task SaveKeyReviewSchedulesAsync(IEnumerable<KeyReviewScheduleRecord> schedules, CancellationToken ct = default);
+
+    /// <summary>Loads recorded placement test results ordered newest first.</summary>
+    Task<IReadOnlyList<PlacementResultRecord>> GetPlacementResultsAsync(CancellationToken ct = default);
+
+    /// <summary>Persists a completed placement test evaluation.</summary>
+    Task SavePlacementResultAsync(PlacementResultRecord placement, CancellationToken ct = default);
+
+    /// <summary>Clears all typing sessions, statistics, course progress, adaptive locks, placement results, and review schedules while preserving user settings.</summary>
+    Task ResetProgressAsync(CancellationToken ct = default);
 }
 
 /// <summary>
@@ -76,9 +97,14 @@ public interface ITypeForgeRepository
 /// </summary>
 public sealed class SqliteTypeForgeRepository : ITypeForgeRepository
 {
-    private const int CurrentSchemaVersion = 2;
+    private const int CurrentSchemaVersion = 3;
     private readonly string _databasePath;
     private readonly string _connectionString;
+
+    /// <summary>
+    /// Optional hook invoked during schema migration steps before commit (used by unit tests to verify rollback resilience).
+    /// </summary>
+    public Action<int>? MigrationStepFaultHook { get; set; }
 
     /// <summary>
     /// Initializes a repository targeting the specified SQLite file path.
@@ -195,29 +221,96 @@ public sealed class SqliteTypeForgeRepository : ITypeForgeRepository
             await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
         }
 
-        if (version < 2)
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+
+        int afterV1 = await ReadUserVersionAsync(connection, null, ct).ConfigureAwait(false);
+        if (afterV1 < 2)
         {
-            const string v2Ddl = """
-                CREATE TABLE IF NOT EXISTS CourseExerciseProgress (
-                    ExerciseId TEXT PRIMARY KEY,
-                    IsUnlocked INTEGER NOT NULL DEFAULT 0,
-                    IsCompleted INTEGER NOT NULL DEFAULT 0,
-                    BestWpm REAL NOT NULL DEFAULT 0,
-                    BestAccuracy REAL NOT NULL DEFAULT 0,
-                    Stars INTEGER NOT NULL DEFAULT 0,
-                    CompletedAt TEXT NULL
-                );
+            await using SqliteTransaction v2Tx = connection.BeginTransaction();
+            try
+            {
+                const string v2Ddl = """
+                    CREATE TABLE IF NOT EXISTS CourseExerciseProgress (
+                        ExerciseId TEXT PRIMARY KEY,
+                        IsUnlocked INTEGER NOT NULL DEFAULT 0,
+                        IsCompleted INTEGER NOT NULL DEFAULT 0,
+                        BestWpm REAL NOT NULL DEFAULT 0,
+                        BestAccuracy REAL NOT NULL DEFAULT 0,
+                        Stars INTEGER NOT NULL DEFAULT 0,
+                        CompletedAt TEXT NULL
+                    );
 
-                PRAGMA user_version = 2;
-                """;
+                    PRAGMA user_version = 2;
+                    """;
 
-            await using var v2Cmd = connection.CreateCommand();
-            v2Cmd.Transaction = transaction;
-            v2Cmd.CommandText = v2Ddl;
-            await v2Cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+                await using var v2Cmd = connection.CreateCommand();
+                v2Cmd.Transaction = v2Tx;
+                v2Cmd.CommandText = v2Ddl;
+                await v2Cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+
+                MigrationStepFaultHook?.Invoke(2);
+                await v2Tx.CommitAsync(ct).ConfigureAwait(false);
+            }
+            catch
+            {
+                await v2Tx.RollbackAsync(ct).ConfigureAwait(false);
+                return;
+            }
         }
 
-        await transaction.CommitAsync(ct).ConfigureAwait(false);
+        int postBaseVersion = await ReadUserVersionAsync(connection, null, ct).ConfigureAwait(false);
+        if (postBaseVersion < 3)
+        {
+            await using SqliteTransaction v3Tx = connection.BeginTransaction();
+            try
+            {
+                const string v3Ddl = """
+                    CREATE TABLE IF NOT EXISTS BigramStatistics (
+                        Bigram TEXT PRIMARY KEY,
+                        TotalCount INTEGER NOT NULL DEFAULT 0,
+                        ErrorCount INTEGER NOT NULL DEFAULT 0,
+                        AverageLatencyMs REAL NOT NULL DEFAULT 0
+                    );
+
+                    CREATE TABLE IF NOT EXISTS KeyReviewSchedule (
+                        Character TEXT PRIMARY KEY,
+                        LastReviewedAt TEXT NULL,
+                        IntervalDays REAL NOT NULL DEFAULT 1.0,
+                        EaseFactor REAL NOT NULL DEFAULT 2.5,
+                        DueAt TEXT NOT NULL
+                    );
+
+                    CREATE TABLE IF NOT EXISTS PlacementResults (
+                        PlacementId TEXT PRIMARY KEY,
+                        TakenAt TEXT NOT NULL,
+                        NetWpm REAL NOT NULL,
+                        Accuracy REAL NOT NULL,
+                        RecommendedTrack TEXT NOT NULL
+                    );
+
+                    CREATE INDEX IF NOT EXISTS IX_KeyReviewSchedule_DueAt ON KeyReviewSchedule(DueAt);
+                    CREATE INDEX IF NOT EXISTS IX_BigramStatistics_AverageLatencyMs ON BigramStatistics(AverageLatencyMs);
+
+                    PRAGMA user_version = 3;
+                    """;
+
+                await using var v3Cmd = connection.CreateCommand();
+                v3Cmd.Transaction = v3Tx;
+                v3Cmd.CommandText = v3Ddl;
+                await v3Cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+
+                MigrationStepFaultHook?.Invoke(3);
+                await v3Tx.CommitAsync(ct).ConfigureAwait(false);
+            }
+            catch
+            {
+                await v3Tx.RollbackAsync(ct).ConfigureAwait(false);
+                if (postBaseVersion < 1)
+                {
+                    throw;
+                }
+            }
+        }
     }
 
     /// <inheritdoc />
@@ -747,6 +840,63 @@ public sealed class SqliteTypeForgeRepository : ITypeForgeRepository
             settings.CustomTestText = customTestStr;
         }
 
+        if (raw.TryGetValue(nameof(UserSettings.PaceCaretMode), out string? paceModeStr)
+            && Enum.TryParse(paceModeStr, out PaceCaretMode paceMode)
+            && Enum.IsDefined(paceMode))
+        {
+            settings.PaceCaretMode = paceMode;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.PaceTargetWpm), out string? paceWpmStr)
+            && int.TryParse(paceWpmStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int paceWpm))
+        {
+            settings.PaceTargetWpm = Math.Clamp(paceWpm, UserSettings.MinPaceTargetWpm, UserSettings.MaxPaceTargetWpm);
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.KeyboardFadeStage), out string? fadeStr)
+            && Enum.TryParse(fadeStr, out KeyboardFadeStage fadeStage)
+            && Enum.IsDefined(fadeStage))
+        {
+            settings.KeyboardFadeStage = fadeStage;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.FingerGuideMode), out string? fingerModeStr)
+            && Enum.TryParse(fingerModeStr, out FingerGuideMode fingerMode)
+            && Enum.IsDefined(fingerMode))
+        {
+            settings.FingerGuideMode = fingerMode;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.ShowWpmInCourse), out string? showWpmStr)
+            && bool.TryParse(showWpmStr, out bool showWpm))
+        {
+            settings.ShowWpmInCourse = showWpm;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.SelectedRealWorldPoolId), out string? poolIdStr)
+            && !string.IsNullOrWhiteSpace(poolIdStr))
+        {
+            settings.SelectedRealWorldPoolId = poolIdStr;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.CoursePassGateEnabled), out string? gateEnabledStr)
+            && bool.TryParse(gateEnabledStr, out bool gateEnabled))
+        {
+            settings.CoursePassGateEnabled = gateEnabled;
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.CourseMinAccuracy), out string? minAccStr)
+            && double.TryParse(minAccStr, NumberStyles.Float, CultureInfo.InvariantCulture, out double minAcc))
+        {
+            settings.CourseMinAccuracy = Math.Clamp(minAcc, UserSettings.MinCourseAccuracy, UserSettings.MaxCourseAccuracy);
+        }
+
+        if (raw.TryGetValue(nameof(UserSettings.CourseMaxMistakes), out string? maxMistakesStr)
+            && int.TryParse(maxMistakesStr, NumberStyles.Integer, CultureInfo.InvariantCulture, out int maxMistakes))
+        {
+            settings.CourseMaxMistakes = Math.Clamp(maxMistakes, UserSettings.MinCourseMaxMistakes, UserSettings.MaxCourseMaxMistakes);
+        }
+
         return settings;
     }
 
@@ -785,7 +935,16 @@ public sealed class SqliteTypeForgeRepository : ITypeForgeRepository
             (nameof(UserSettings.CustomWordListCsv), settings.CustomWordListCsv),
             (nameof(UserSettings.SelectedBookId), settings.SelectedBookId),
             (nameof(UserSettings.SelectedBookParagraphIndex), settings.SelectedBookParagraphIndex.ToString(CultureInfo.InvariantCulture)),
-            (nameof(UserSettings.CustomTestText), settings.CustomTestText)
+            (nameof(UserSettings.CustomTestText), settings.CustomTestText),
+            (nameof(UserSettings.PaceCaretMode), settings.PaceCaretMode.ToString()),
+            (nameof(UserSettings.PaceTargetWpm), settings.PaceTargetWpm.ToString(CultureInfo.InvariantCulture)),
+            (nameof(UserSettings.KeyboardFadeStage), settings.KeyboardFadeStage.ToString()),
+            (nameof(UserSettings.FingerGuideMode), settings.FingerGuideMode.ToString()),
+            (nameof(UserSettings.ShowWpmInCourse), settings.ShowWpmInCourse.ToString()),
+            (nameof(UserSettings.SelectedRealWorldPoolId), settings.SelectedRealWorldPoolId),
+            (nameof(UserSettings.CoursePassGateEnabled), settings.CoursePassGateEnabled.ToString()),
+            (nameof(UserSettings.CourseMinAccuracy), settings.CourseMinAccuracy.ToString(CultureInfo.InvariantCulture)),
+            (nameof(UserSettings.CourseMaxMistakes), settings.CourseMaxMistakes.ToString(CultureInfo.InvariantCulture))
         };
 
         await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);
@@ -916,6 +1075,226 @@ public sealed class SqliteTypeForgeRepository : ITypeForgeRepository
                 : DBNull.Value);
 
         await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<string, BigramMetric>> GetBigramStatisticsAsync(CancellationToken ct = default)
+    {
+        await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT Bigram, TotalCount, ErrorCount, AverageLatencyMs
+            FROM BigramStatistics;
+            """;
+
+        var dict = new Dictionary<string, BigramMetric>(StringComparer.Ordinal);
+        await using SqliteDataReader reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+        {
+            string bigram = reader.GetString(0);
+            if (bigram.Length == 2)
+            {
+                dict[bigram] = new BigramMetric(
+                    Bigram: bigram,
+                    TotalCount: reader.GetInt32(1),
+                    ErrorCount: reader.GetInt32(2),
+                    AverageLatencyMs: reader.GetDouble(3));
+            }
+        }
+
+        return dict;
+    }
+
+    /// <inheritdoc />
+    public async Task SaveBigramStatisticsAsync(IEnumerable<BigramMetric> bigrams, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(bigrams);
+
+        await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using SqliteTransaction transaction = connection.BeginTransaction();
+
+        const string sql = """
+            INSERT INTO BigramStatistics (Bigram, TotalCount, ErrorCount, AverageLatencyMs)
+            VALUES (@Bigram, @TotalCount, @ErrorCount, @AverageLatencyMs)
+            ON CONFLICT(Bigram) DO UPDATE SET
+                TotalCount = excluded.TotalCount,
+                ErrorCount = excluded.ErrorCount,
+                AverageLatencyMs = excluded.AverageLatencyMs;
+            """;
+
+        foreach (BigramMetric item in bigrams)
+        {
+            item.Validate();
+            await using var cmd = connection.CreateCommand();
+            cmd.Transaction = transaction;
+            cmd.CommandText = sql;
+            cmd.Parameters.AddWithValue("@Bigram", item.Bigram);
+            cmd.Parameters.AddWithValue("@TotalCount", item.TotalCount);
+            cmd.Parameters.AddWithValue("@ErrorCount", item.ErrorCount);
+            cmd.Parameters.AddWithValue("@AverageLatencyMs", item.AverageLatencyMs);
+            await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        }
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyDictionary<char, KeyReviewScheduleRecord>> GetKeyReviewSchedulesAsync(CancellationToken ct = default)
+    {
+        await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT Character, LastReviewedAt, IntervalDays, EaseFactor, DueAt
+            FROM KeyReviewSchedule;
+            """;
+
+        var dict = new Dictionary<char, KeyReviewScheduleRecord>();
+        await using SqliteDataReader reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+        {
+            string charStr = reader.GetString(0);
+            if (charStr.Length == 0)
+            {
+                continue;
+            }
+
+            char ch = charStr[0];
+            DateTimeOffset? lastReviewed = reader.IsDBNull(1)
+                ? null
+                : DateTimeOffset.Parse(reader.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+            DateTimeOffset dueAt = DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+
+            dict[ch] = new KeyReviewScheduleRecord(
+                Character: ch,
+                LastReviewedAt: lastReviewed,
+                IntervalDays: reader.GetDouble(2),
+                EaseFactor: reader.GetDouble(3),
+                DueAt: dueAt);
+        }
+
+        return dict;
+    }
+
+    /// <inheritdoc />
+    public async Task SaveKeyReviewSchedulesAsync(IEnumerable<KeyReviewScheduleRecord> schedules, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(schedules);
+
+        await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using SqliteTransaction transaction = connection.BeginTransaction();
+
+        const string sql = """
+            INSERT INTO KeyReviewSchedule (Character, LastReviewedAt, IntervalDays, EaseFactor, DueAt)
+            VALUES (@Character, @LastReviewedAt, @IntervalDays, @EaseFactor, @DueAt)
+            ON CONFLICT(Character) DO UPDATE SET
+                LastReviewedAt = excluded.LastReviewedAt,
+                IntervalDays = excluded.IntervalDays,
+                EaseFactor = excluded.EaseFactor,
+                DueAt = excluded.DueAt;
+            """;
+
+        foreach (KeyReviewScheduleRecord item in schedules)
+        {
+            item.Validate();
+            await using var cmd = connection.CreateCommand();
+            cmd.Transaction = transaction;
+            cmd.CommandText = sql;
+            cmd.Parameters.AddWithValue("@Character", item.Character.ToString());
+            cmd.Parameters.AddWithValue(
+                "@LastReviewedAt",
+                item.LastReviewedAt.HasValue
+                    ? item.LastReviewedAt.Value.UtcDateTime.ToString("O", CultureInfo.InvariantCulture)
+                    : DBNull.Value);
+            cmd.Parameters.AddWithValue("@IntervalDays", item.IntervalDays);
+            cmd.Parameters.AddWithValue("@EaseFactor", item.EaseFactor);
+            cmd.Parameters.AddWithValue("@DueAt", item.DueAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture));
+            await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        }
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<PlacementResultRecord>> GetPlacementResultsAsync(CancellationToken ct = default)
+    {
+        await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT PlacementId, TakenAt, NetWpm, Accuracy, RecommendedTrack
+            FROM PlacementResults
+            ORDER BY TakenAt DESC;
+            """;
+
+        var list = new List<PlacementResultRecord>();
+        await using SqliteDataReader reader = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+        {
+            list.Add(new PlacementResultRecord(
+                PlacementId: reader.GetString(0),
+                TakenAt: DateTimeOffset.Parse(reader.GetString(1), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                NetWpm: reader.GetDouble(2),
+                AccuracyPercentage: reader.GetDouble(3),
+                RecommendedTrack: reader.GetString(4)));
+        }
+
+        return list;
+    }
+
+    /// <inheritdoc />
+    public async Task SavePlacementResultAsync(PlacementResultRecord placement, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(placement);
+        placement.Validate();
+
+        await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            INSERT INTO PlacementResults (PlacementId, TakenAt, NetWpm, Accuracy, RecommendedTrack)
+            VALUES (@PlacementId, @TakenAt, @NetWpm, @Accuracy, @RecommendedTrack)
+            ON CONFLICT(PlacementId) DO UPDATE SET
+                TakenAt = excluded.TakenAt,
+                NetWpm = excluded.NetWpm,
+                Accuracy = excluded.Accuracy,
+                RecommendedTrack = excluded.RecommendedTrack;
+            """;
+
+        cmd.Parameters.AddWithValue("@PlacementId", placement.PlacementId);
+        cmd.Parameters.AddWithValue("@TakenAt", placement.TakenAt.UtcDateTime.ToString("O", CultureInfo.InvariantCulture));
+        cmd.Parameters.AddWithValue("@NetWpm", placement.NetWpm);
+        cmd.Parameters.AddWithValue("@Accuracy", placement.AccuracyPercentage);
+        cmd.Parameters.AddWithValue("@RecommendedTrack", placement.RecommendedTrack);
+        await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task ResetProgressAsync(CancellationToken ct = default)
+    {
+        await using SqliteConnection connection = await OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using SqliteTransaction transaction = connection.BeginTransaction();
+
+        await using (var cmd = connection.CreateCommand())
+        {
+            cmd.Transaction = transaction;
+            cmd.CommandText = """
+                DELETE FROM PracticeSessions;
+                DELETE FROM KeyStatistics;
+                DELETE FROM BigramStatistics;
+                DELETE FROM KeyReviewSchedule;
+                DELETE FROM PlacementResults;
+                DELETE FROM AdaptiveProgress;
+                DELETE FROM CourseExerciseProgress;
+                DELETE FROM LessonProgress;
+
+                INSERT OR IGNORE INTO LessonProgress (LessonId, IsUnlocked, IsCompleted, BestWpm, BestAccuracy, Stars, CompletedAt)
+                SELECT LessonId, 1, 0, 0, 0, 0, NULL
+                FROM Lessons
+                ORDER BY ROWID ASC
+                LIMIT 1;
+                """;
+            await cmd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        }
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
     private async Task<SqliteConnection> OpenConnectionAsync(CancellationToken ct)

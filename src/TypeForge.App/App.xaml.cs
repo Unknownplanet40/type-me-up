@@ -69,8 +69,11 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
+        var profileService = new ProfileService();
+        profileService.Initialize();
+        services.AddSingleton<IProfileService>(profileService);
         services.AddSingleton<ITypeForgeRepository>(
-            _ => new SqliteTypeForgeRepository(SqliteTypeForgeRepository.GetDefaultDatabasePath()));
+            _ => new SwitchableRepository(profileService.CreateRepositoryForActiveProfile()));
         services.AddSingleton<CourseProgressionService>();
         services.AddSingleton<CourseCatalogService>();
         services.AddSingleton<ITypeForgeStateService, TypeForgeStateService>();

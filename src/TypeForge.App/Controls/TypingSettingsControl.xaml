@@ -18,6 +18,25 @@
                     <CheckBox x:Name="ChkForgiveErrors" Content="Forgive errors" />
                     <CheckBox x:Name="ChkSpaceSkipsWords" Content="Space skips words" />
                 </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,4,0,0">
+                    <TextBlock Text="Pace caret:" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" Width="82" />
+                    <RadioButton x:Name="RadioPaceOff" Content="Off" GroupName="PaceCaretGroup" Tag="Off" Checked="PaceModeRadio_Checked" />
+                    <RadioButton x:Name="RadioPaceFixed" Content="Fixed WPM" GroupName="PaceCaretGroup" Tag="FixedWpm" Checked="PaceModeRadio_Checked" />
+                    <RadioButton x:Name="RadioPacePersonalBest" Content="Personal Best" GroupName="PaceCaretGroup" Tag="PersonalBest" Checked="PaceModeRadio_Checked" />
+                    <RadioButton x:Name="RadioPaceLastSession" Content="Last session" GroupName="PaceCaretGroup" Tag="LastSession" Checked="PaceModeRadio_Checked" />
+                </StackPanel>
+
+                <Grid x:Name="PaceFixedWpmRow" ColumnSpacing="12" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="220" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Fixed pace target:" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                    <Slider x:Name="SliderPaceTargetWpm" Grid.Column="1" Minimum="10" Maximum="200" StepFrequency="5" ValueChanged="PaceWpmSlider_Changed" VerticalAlignment="Center" AutomationProperties.Name="Fixed pace WPM target" />
+                    <TextBlock x:Name="TxtPaceTargetWpm" Grid.Column="2" Text="60 WPM" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource ForgeTextPrimaryBrush}" VerticalAlignment="Center" />
+                </Grid>
             </StackPanel>
         </Border>
 

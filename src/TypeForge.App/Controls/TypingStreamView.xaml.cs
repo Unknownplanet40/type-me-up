@@ -43,6 +43,9 @@ public sealed partial class TypingStreamView : UserControl
     private CursorShapeMode _cursorShape = CursorShapeMode.Underline;
     private CursorMovementMode _cursorMovement = CursorMovementMode.Smooth;
     private int _activeCursorIndex = -1;
+    private int _ghostCursorIndex = -1;
+    private int _lastPositionedGhostIndex = -1;
+    private bool _isGhostVisible;
     private int _maxVisibleLines;
 
     private double _targetLeft;
@@ -134,6 +137,7 @@ public sealed partial class TypingStreamView : UserControl
             _charRuns.Clear();
             _renderedTargetText = text;
             _hasCursorTarget = false;
+            _lastPositionedGhostIndex = -1;
 
             for (int i = 0; i < text.Length; i++)
             {
@@ -172,7 +176,62 @@ public sealed partial class TypingStreamView : UserControl
 
     private void TypingStreamBlock_SizeChanged(object sender, SizeChangedEventArgs e)
     {
+        _lastPositionedGhostIndex = -1;
         PositionCursorIndicator();
+        PositionGhostIndicator();
+    }
+
+    public void UpdatePaceCaret(int ghostIndex, bool visible)
+    {
+        if (!visible || ghostIndex < 0 || _charRuns.Count == 0)
+        {
+            _isGhostVisible = false;
+            _ghostCursorIndex = -1;
+            _lastPositionedGhostIndex = -1;
+            PaceGhostIndicator.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        int clamped = Math.Clamp(ghostIndex, 0, _charRuns.Count - 1);
+        bool changed = !_isGhostVisible || _ghostCursorIndex != clamped;
+        _isGhostVisible = true;
+        _ghostCursorIndex = clamped;
+
+        if (changed)
+        {
+            PositionGhostIndicator();
+        }
+    }
+
+    private void PositionGhostIndicator()
+    {
+        if (!_isGhostVisible || _ghostCursorIndex < 0 || _ghostCursorIndex >= _charRuns.Count || TypingStreamBlock.ActualWidth <= 0)
+        {
+            PaceGhostIndicator.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        if (_lastPositionedGhostIndex == _ghostCursorIndex && PaceGhostIndicator.Visibility == Visibility.Visible)
+        {
+            return;
+        }
+
+        try
+        {
+            Run ghostRun = _charRuns[_ghostCursorIndex];
+            Rect startRect = ghostRun.ContentStart.GetCharacterRect(LogicalDirection.Forward);
+            double charHeight = Math.Max(startRect.Height, _renderedFontSize * 1.25);
+
+            Canvas.SetLeft(PaceGhostIndicator, startRect.X - 1);
+            Canvas.SetTop(PaceGhostIndicator, startRect.Y + 1);
+            PaceGhostIndicator.Height = charHeight;
+            PaceGhostIndicator.Visibility = Visibility.Visible;
+            _lastPositionedGhostIndex = _ghostCursorIndex;
+        }
+        catch
+        {
+            PaceGhostIndicator.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void PositionCursorIndicator()

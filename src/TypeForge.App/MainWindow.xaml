@@ -30,7 +30,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="14" Padding="24,0,12,0" VerticalAlignment="Center">
+            <StackPanel x:Name="TopBarLeftGroup" Grid.Column="0" Orientation="Horizontal" Spacing="14" Padding="24,0,12,0" VerticalAlignment="Center">
                 <TextBlock
                     Text="TypeForge"
                     FontSize="13"
@@ -41,17 +41,17 @@
                 <Border Width="1" Height="11" Background="{ThemeResource ForgeHairlineBrush}" VerticalAlignment="Center" />
 
                 <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                    <Button x:Name="NavPractice" Tag="practice" Click="NavItem_Click" AllowFocusOnInteraction="False" AutomationProperties.Name="Practice" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
-                        <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
-                            <TextBlock x:Name="LblPractice" Text="Practice" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
-                            <Border x:Name="DotPractice" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Collapsed" />
-                        </StackPanel>
-                    </Button>
-
                     <Button x:Name="NavCourse" Tag="course" Click="NavItem_Click" AllowFocusOnInteraction="False" AutomationProperties.Name="Course" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
                         <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <TextBlock x:Name="LblCourse" Text="Course" FontSize="12" FontWeight="Medium" Foreground="{ThemeResource ForgeTextPrimaryBrush}" />
                             <Border x:Name="DotCourse" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Visible" />
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="NavPractice" Tag="practice" Click="NavItem_Click" AllowFocusOnInteraction="False" AutomationProperties.Name="Practice" Height="26" Background="Transparent" BorderThickness="0" Padding="8,0" CornerRadius="5" VerticalAlignment="Center">
+                        <StackPanel Spacing="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock x:Name="LblPractice" Text="Practice" FontSize="12" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                            <Border x:Name="DotPractice" Height="1.5" Width="14" CornerRadius="1" Background="{ThemeResource ForgePurpleBrush}" HorizontalAlignment="Center" Visibility="Collapsed" />
                         </StackPanel>
                     </Button>
 
@@ -124,6 +124,49 @@
                 </Button>
 
                 <Button
+                    x:Name="BtnProfilePill"
+                    Click="BtnProfilePill_Click"
+                    AllowFocusOnInteraction="False"
+                    Height="22"
+                    Padding="7,0"
+                    CornerRadius="11"
+                    Background="{ThemeResource ForgeCardBrush}"
+                    BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                    BorderThickness="1"
+                    VerticalAlignment="Center"
+                    ToolTipService.ToolTip="Switch or manage profile"
+                    AutomationProperties.Name="Active profile">
+                    <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                        <Border
+                            x:Name="ProfilePillAvatar"
+                            Width="14"
+                            Height="14"
+                            CornerRadius="7"
+                            Background="{ThemeResource ForgePurpleBrush}"
+                            VerticalAlignment="Center">
+                            <TextBlock
+                                x:Name="ProfilePillInitials"
+                                Text="D"
+                                FontSize="9"
+                                FontWeight="Bold"
+                                Foreground="White"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                        </Border>
+                        <TextBlock
+                            x:Name="ProfilePillName"
+                            Text="Default"
+                            FontSize="11"
+                            FontWeight="SemiBold"
+                            Foreground="{ThemeResource ForgeTextPrimaryBrush}"
+                            VerticalAlignment="Center"
+                            MaxWidth="96"
+                            TextTrimming="CharacterEllipsis" />
+                        <FontIcon Glyph="&#xE70D;" FontSize="8" Foreground="{ThemeResource ForgeTextSecondaryBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <Button
                     x:Name="NavSettings"
                     Tag="settings"
                     Click="NavItem_Click"
@@ -140,29 +183,70 @@
                     <FontIcon x:Name="IconSettings" Glyph="&#xE713;" FontSize="13" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
                 </Button>
             </StackPanel>
+
+            <Button
+                x:Name="BtnFocusExit"
+                Grid.Column="2"
+                Visibility="Collapsed"
+                AllowFocusOnInteraction="False"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Margin="0,0,148,0"
+                Height="24"
+                Background="{ThemeResource ForgeCardBrush}"
+                BorderBrush="{ThemeResource ForgeHairlineBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="8,0"
+                Opacity="0.85"
+                ToolTipService.ToolTip="Exit Zen / Focus mode (Esc)"
+                AutomationProperties.Name="Exit Focus mode"
+                Click="BtnFocusExit_Click">
+                <StackPanel Orientation="Horizontal" Spacing="5" VerticalAlignment="Center">
+                    <FontIcon Glyph="&#xE73F;" FontSize="10" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                    <TextBlock Text="Esc" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                </StackPanel>
+            </Button>
         </Grid>
 
         <Grid Grid.Row="1">
             <Frame x:Name="ContentFrame" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" />
 
-            <Button
-                x:Name="BtnFocusExit"
+            <!-- Full-Screen Launch Profile Picker ("Who's typing?") when 2+ profiles exist -->
+            <Grid
+                x:Name="ProfilePickerOverlay"
                 Visibility="Collapsed"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Margin="0,12,24,0"
-                Background="{ThemeResource ForgeCardBrush}"
-                BorderBrush="{ThemeResource ForgeHairlineBrush}"
-                BorderThickness="1"
-                CornerRadius="8"
-                Padding="10,5"
-                Opacity="0.65"
-                Click="BtnFocusExit_Click">
-                <StackPanel Orientation="Horizontal" Spacing="6">
-                    <FontIcon Glyph="&#xE73F;" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
-                    <TextBlock Text="Esc" FontSize="11" Foreground="{ThemeResource ForgeTextSecondaryBrush}" />
+                Background="{ThemeResource ForgeCanvasBrush}"
+                Padding="32">
+                <StackPanel
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="24"
+                    MaxWidth="880">
+                    <StackPanel Spacing="6" HorizontalAlignment="Center">
+                        <TextBlock
+                            Text="Who's typing?"
+                            FontSize="28"
+                            FontWeight="Bold"
+                            Foreground="{ThemeResource ForgeTextPrimaryBrush}"
+                            HorizontalAlignment="Center" />
+                        <TextBlock
+                            Text="Choose a profile to continue or create a new one"
+                            FontSize="14"
+                            Foreground="{ThemeResource ForgeTextSecondaryBrush}"
+                            HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" MaxWidth="860">
+                        <StackPanel
+                            x:Name="ProfilePickerCardsHost"
+                            Orientation="Horizontal"
+                            Spacing="14"
+                            HorizontalAlignment="Center"
+                            Padding="4" />
+                    </ScrollViewer>
                 </StackPanel>
-            </Button>
+            </Grid>
         </Grid>
     </Grid>
 </Window>

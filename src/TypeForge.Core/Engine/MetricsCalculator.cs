@@ -52,4 +52,45 @@ public static class MetricsCalculator
         double accuracy = (double)Math.Max(0, correctKeystrokes) / totalKeystrokes * 100.0;
         return Math.Round(Math.Clamp(accuracy, 0.0, 100.0), 2);
     }
+
+    /// <summary>
+    /// Calculates typing rhythm consistency percentage (0–100) from inter-keystroke intervals.
+    /// Higher values indicate steadier cadence; pauses above 2000 ms are excluded as outliers.
+    /// </summary>
+    public static double CalculateConsistencyPercentage(IReadOnlyList<double> keystrokeLatenciesMs)
+    {
+        ArgumentNullException.ThrowIfNull(keystrokeLatenciesMs);
+
+        var samples = new List<double>(keystrokeLatenciesMs.Count);
+        foreach (double ms in keystrokeLatenciesMs)
+        {
+            if (ms is > 0.0 and <= 2000.0)
+            {
+                samples.Add(ms);
+            }
+        }
+
+        if (samples.Count <= 1)
+        {
+            return 100.0;
+        }
+
+        double mean = samples.Average();
+        if (mean <= 0.0)
+        {
+            return 100.0;
+        }
+
+        double variance = 0.0;
+        foreach (double ms in samples)
+        {
+            double diff = ms - mean;
+            variance += diff * diff;
+        }
+
+        double stdDev = Math.Sqrt(variance / samples.Count);
+        double cv = stdDev / mean;
+        double consistency = (1.0 - Math.Min(1.0, cv)) * 100.0;
+        return Math.Round(Math.Clamp(consistency, 0.0, 100.0), 1);
+    }
 }

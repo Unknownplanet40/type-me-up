@@ -33,6 +33,10 @@ public sealed class TypingEngine
     private readonly StringBuilder _typedText = new();
     private readonly TypingCharacterState[] _slotStates;
     private readonly Dictionary<char, KeyAccumulator> _keyAccumulators = new();
+    private readonly BigramTracker _bigramTracker = new();
+    private readonly List<double> _keystrokeLatenciesMs = [];
+    private readonly HashSet<int> _missedWordIndices = [];
+    private readonly List<(int Start, int Length)> _wordSpans = [];
 
     private int _cursorIndex;
     private int _totalKeystrokes;
@@ -71,6 +75,7 @@ public sealed class TypingEngine
         _sessionType = sessionType;
         _lessonId = lessonId;
         _slotStates = new TypingCharacterState[targetText.Length];
+        BuildWordSpans(targetText, _wordSpans);
         Reset();
     }
 
@@ -130,6 +135,7 @@ public sealed class TypingEngine
             if (_cursorIndex < _targetText.Length && _targetText[_cursorIndex] == ' ')
             {
                 RecordKeyAccumulator(' ', isMatch: true, latencyMs: null);
+                _bigramTracker.RecordKeystroke(' ', isCorrect: true, latencyMs: null);
                 _totalKeystrokes++;
                 _correctKeystrokes++;
                 _slotStates[_cursorIndex] = TypingCharacterState.Correct;
@@ -150,6 +156,12 @@ public sealed class TypingEngine
         bool isMatch = inputChar == expectedChar;
 
         RecordKeyAccumulator(keyBucket, isMatch, latencyMs);
+        _bigramTracker.RecordKeystroke(expectedChar, isMatch, latencyMs);
+        if (latencyMs is > 0.0 and <= 2000.0)
+        {
+            _keystrokeLatenciesMs.Add(latencyMs.Value);
+        }
+
         _totalKeystrokes++;
 
         if (isMatch)
@@ -162,6 +174,7 @@ public sealed class TypingEngine
         }
         else
         {
+            RecordMissedWordAt(_cursorIndex);
             _mistakes++;
             if (!_stopOnError)
             {
@@ -208,6 +221,7 @@ public sealed class TypingEngine
         }
 
         _slotStates[_cursorIndex] = TypingCharacterState.Pending;
+        _bigramTracker.RecordBackspace();
         return true;
     }
 
@@ -219,6 +233,9 @@ public sealed class TypingEngine
         _typedText.Clear();
         Array.Fill(_slotStates, TypingCharacterState.Pending);
         _keyAccumulators.Clear();
+        _bigramTracker.Clear();
+        _keystrokeLatenciesMs.Clear();
+        _missedWordIndices.Clear();
 
         _cursorIndex = 0;
         _totalKeystrokes = 0;
@@ -297,6 +314,106 @@ public sealed class TypingEngine
 
         result.Validate();
         return result;
+    }
+
+    /// <summary>
+    /// Returns the bigram latency and error metrics accumulated during the current session.
+    /// </summary>
+    public IReadOnlyDictionary<string, BigramMetric> GetBigramBreakdown() => _bigramTracker.GetMetrics();
+
+    /// <summary>
+    /// Returns typing rhythm consistency percentage (0–100) for the current session.
+    /// </summary>
+    public double GetConsistencyPercentage() =>
+        MetricsCalculator.CalculateConsistencyPercentage(_keystrokeLatenciesMs);
+
+    /// <summary>
+    /// Returns distinct target words in which one or more mistakes occurred during the current session.
+    /// </summary>
+    public IReadOnlyList<string> GetMissedWords()
+    {
+        if (_missedWordIndices.Count == 0 || _wordSpans.Count == 0)
+        {
+            return [];
+        }
+
+        var result = new List<string>(_missedWordIndices.Count);
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (int idx in _missedWordIndices.OrderBy(i => i))
+        {
+            if (idx < 0 || idx >= _wordSpans.Count)
+            {
+                continue;
+            }
+
+            (int start, int length) = _wordSpans[idx];
+            string word = _targetText.Substring(start, length);
+            if (!string.IsNullOrWhiteSpace(word) && seen.Add(word))
+            {
+                result.Add(word);
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Builds a focused drill prompt cycling through the specified missed words.
+    /// </summary>
+    public static string BuildMissedWordsDrillText(IReadOnlyList<string> missedWords, int targetWordCount = 24)
+    {
+        ArgumentNullException.ThrowIfNull(missedWords);
+        if (missedWords.Count == 0 || targetWordCount <= 0)
+        {
+            return string.Empty;
+        }
+
+        var words = new List<string>(targetWordCount);
+        for (int i = 0; i < targetWordCount; i++)
+        {
+            words.Add(missedWords[i % missedWords.Count]);
+        }
+
+        return string.Join(' ', words);
+    }
+
+    private void RecordMissedWordAt(int charIndex)
+    {
+        for (int i = 0; i < _wordSpans.Count; i++)
+        {
+            (int start, int length) = _wordSpans[i];
+            if (charIndex >= start && charIndex < start + length)
+            {
+                _missedWordIndices.Add(i);
+                return;
+            }
+        }
+    }
+
+    private static void BuildWordSpans(string text, List<(int Start, int Length)> spans)
+    {
+        spans.Clear();
+        int i = 0;
+        while (i < text.Length)
+        {
+            while (i < text.Length && char.IsWhiteSpace(text[i]))
+            {
+                i++;
+            }
+
+            if (i >= text.Length)
+            {
+                break;
+            }
+
+            int start = i;
+            while (i < text.Length && !char.IsWhiteSpace(text[i]))
+            {
+                i++;
+            }
+
+            spans.Add((start, i - start));
+        }
     }
 
     private double CalculateAccuracy()

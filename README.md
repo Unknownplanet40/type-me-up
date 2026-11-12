@@ -1,38 +1,41 @@
-# Vibe Coding Template
+# TypeForge
 
-Copy this folder to start a new project, then open it in Google Antigravity.
+Offline-first native Windows 10/11 typing tutor built with **WinUI 3**, **Windows App SDK**, and **.NET 8**.
 
-Prerequisite: Node.js installed on PATH (needed for npx / chrome-devtools-mcp).
+## Features
 
-## How to use
+- **4-Track Course Catalog**: Structured lessons across *Fast Touch Typing*, *Speed Building*, *Numbers*, and *Special Marks* with sequential 5-step progression (`Tip`, `New Keys`, `Key Drill`, `Word Drill`, `Paragraph Drill`).
+- **Guided Daily Practice**: First-launch 60-second placement test, **Today's Session** daily planner (`Warm-up`, `Course Step`, `Weakness Review`, `Spaced Repetition Due Keys`), and **Skip ahead when mastered**.
+- **Adaptive Learning Engine**: Per-key and 2-letter bigram (`BigramTracker`) latency/accuracy tracking, `WeaknessScorer` weighted drills, SM-2-lite `ReviewScheduler`, and **Slowest Pairs** drills.
+- **Ergonomic & Accuracy Coaching**: Native Canvas **Finger Guide** hand diagram, strict-mode wrong-key feedback, Caps Lock guard on lowercase-only drills, keyboard fade ramp (`Full Labels` -> `Home-Row Bumps` -> `Hidden`), and accuracy-first early lessons.
+- **Speed & Rhythm Tools**: Live **Pace Caret** (`Off`, `Fixed WPM`, `Personal Best`, `Last session`), **Raw WPM** & **Consistency %**, quiet fatigue break nudges, and one-click **Practice Missed Words** replay on Results.
+- **Timed Tests & Real-World Pools**: Configurable timed/word tests plus **Real-World Pools** (`Quotes`, `Code snippets`, `Numbers`, `Punctuation`) and custom pasted text.
+- **Multi-Profile, Fresh Start & Leaderboard**: Isolated per-profile SQLite databases, `"Who's typing?"` launch picker when `2+` profiles exist, top-bar profile switcher, **Reset Progress (Fresh Start)** preserving settings, and a **Profile Leaderboard** on the Stats page.
+- **Analytics & Visuals**: WPM/Accuracy history charts, 7-day Weekly Trend, QWERTY Heatmap, Weak Bigrams, Due Review Keys, and Dark/Light Acrylic themes.
+- **Automatic Updates**: Checks GitHub Releases in the background and installs updates via Inno Setup (`TypeForge-Setup-win-x64.exe`).
 
-1. Copy `temps-plates/` to your new project folder (or use GitHub "Use this template").
-2. Run `powershell -ExecutionPolicy Bypass -File scripts/init-project.ps1` to initialize Git and exclude agent/template files from project commits.
-3. Open the new folder in Antigravity.
-4. Run `/discovery` — first the New Project checklist (app, users/roles, stack, design, data/sensitive), then 7 MVP questions.
-5. Approve the generated docs in `docs/`.
-6. Run `/build-feature` to build tasks one by one.
+## Architecture & Storage
 
-## Default stack
+- `src/TypeForge.Core`: Pure .NET 8 typing engine, adaptive/course/placement/review algorithms, and parameterized SQLite persistence (`Microsoft.Data.Sqlite`).
+- `src/TypeForge.App`: WinUI 3 desktop UI (`CommunityToolkit.Mvvm`, Dependency Injection, native Canvas charts & keyboard/finger controls).
+- `tests/TypeForge.Tests`: xUnit unit test suite.
+- **Local Data**: Stored offline at `%LOCALAPPDATA%\TypeForge\` (`profiles.json` and `profiles/<id>.db`), with automatic migration from legacy `typeforge.db`.
 
-Next.js + TypeScript + Tailwind + shadcn + Supabase + Vercel. Override in discovery if you want another stack.
+## Build & Test
 
-## What is included
+Run unit tests:
 
-- `AGENTS.md` — project rules, honesty, coding, security, update flow
-- `.agents/rules/` — commit workflow and coding rules
-- `.agents/skills/` — discovery, build-feature, handoff skills
-- `.github/` — issue and PR templates plus release workflow
-- `docs/templates/` — PRD, DESIGN, TECH, TASKS templates
-- `handoff.md` — session memory, updated after each push
+```powershell
+$env:DOTNET_ROLL_FORWARD = "Major"
+dotnet test tests/TypeForge.Tests/TypeForge.Tests.csproj -c Release --nologo
+```
 
-## Update flow
+Build the WinUI 3 app:
 
-Push to `main` triggers GitHub Actions. CI bumps `VERSION`, tags the release, and publishes Release notes. The app reads `version.json` or the latest Release for "What is new". There is no CHANGELOG.md.
+```powershell
+dotnet build src/TypeForge.App/TypeForge.App.csproj -c Debug -p:Platform=x64 --nologo
+```
 
-## Native Windows preset
-Only if discovery Stack question is answered 2 (Native Windows WinUI3): copy `docs/presets/WINUI3_STARTER_GUIDE.md` and `docs/presets/WINUI3_UPDATE_WORKFLOW.md` into project `docs/` via `scripts/copy-winui3-presets.ps1` and invoke `/winui3` skill.
+## Release Flow
 
-## Security
-- Copy `.env.example` to `.env.local` for local dev. Never commit `.env.local`.
-- Production keys go in the hosting dashboard. CI keys go in GitHub Secrets.
+Pushing to `main` triggers `.github/workflows/release.yml`, which automatically bumps `VERSION`, builds the self-contained Windows installer (`TypeForge-Setup-win-x64.exe`), and publishes a GitHub Release used by the in-app updater. Do not edit `VERSION` or `version.json` manually.
